@@ -8,7 +8,7 @@ export interface ClientToServerEvents {
   clientMove: (data: { move: string }, callback: (data: {status: string, content: string}) => void) => void
 }
 
-export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://192.168.1.1:5000', {
+export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('https://192.168.2.201:5000', {
   autoConnect: true, // Just to know that this option exists :)
 });
 

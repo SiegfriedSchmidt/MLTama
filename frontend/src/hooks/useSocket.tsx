@@ -4,7 +4,7 @@ import {useEffect, useState} from "react";
 export default function useSocket() {
   const [opponentMove, setOpponentMove] = useState<{ move: string, fen: string }>();
 
-  function clientMakeMove(move: string, callback: (data: {status: string, content: string}) => void) {
+  function clientMakeMove(move: string, callback: (data: { status: string, content: string }) => void) {
     socket.emit('clientMove', {move}, callback)
   }
 

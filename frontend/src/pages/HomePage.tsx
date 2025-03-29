@@ -1,11 +1,12 @@
-import React, {} from 'react';
-import {Text, Container, Center} from "@chakra-ui/react";
+import React, {useEffect} from 'react';
+import {Text, Flex} from "@chakra-ui/react";
+import useSocket from "@/hooks/useSocket.tsx";
 
 const HomePage = () => {
   return (
-    <Center width="100%">
+    <Flex height="100%" justifyContent="center" alignItems="center">
       <Text textStyle="5xl">Machine Learning Tama</Text>
-    </Center>
+    </Flex>
   );
 };
 
