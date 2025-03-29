@@ -1,0 +1,15 @@
+{
+  "name": "ML Armenian draughts",
+  "short_name": "MLTama",
+  "start_url": "https://siegfriedschmidt.github.io/MeshMurmur/",
+  "display": "standalone",
+  "background_color": "#fff",
+  "description": "App for play tama with ml agents",
+  "icons": [
+    {
+      "src": "site-icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    }
+  ]
+}
