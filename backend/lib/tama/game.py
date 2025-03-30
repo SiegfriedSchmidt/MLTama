@@ -1,19 +1,18 @@
-import numpy as np
 from socketio import AsyncServer
-
-from lib.tama.fen import convert_fen_to_field, convert_field_to_fen, piece_to_char
+from lib.tama.fen import fen_to_field, field_to_fen, piece_to_char, fen_to_side
 
 
 class Game:
     def __init__(self, fen: str, room: str, sio: AsyncServer):
-        self.field = convert_fen_to_field(fen)
+        self.field = fen_to_field(fen)
+        self.side = fen_to_side(fen)
         self.room = room
         self.sio = sio
         self.selected: tuple[int, int] | None = None
 
     @property
     def fen(self):
-        return convert_field_to_fen(self.field, True)
+        return field_to_fen(self.field, self.side)
 
     def select(self, row: int, col: int) -> tuple[str, tuple[int, int], list[tuple[int, int]]]:
         if self.field[row, col] > 0:

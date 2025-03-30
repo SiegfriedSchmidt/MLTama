@@ -2,9 +2,14 @@ import numpy as np
 
 char_to_piece = {'w': 1, 'W': 2, 'b': -1, 'B': -2}
 piece_to_char = {v: k for k, v in char_to_piece.items()}
+side_to_fen = ['', 'w', 'b']  # 1 - white, -1 - black
 
 
-def convert_fen_to_field(fen: str):
+def fen_to_side(fen: str) -> int:
+    return 1 if fen.split()[1] == 'w' else -1
+
+
+def fen_to_field(fen: str):
     field = np.zeros((8, 8), dtype=np.int8)
     row, col = 7, 0
     for char in fen.split()[0]:
@@ -22,7 +27,7 @@ def convert_fen_to_field(fen: str):
     return field
 
 
-def convert_field_to_fen(field: np.ndarray, white: bool):
+def field_to_fen(field: np.ndarray, side: int):
     fen = ''
     for row in range(field.shape[0] - 1, -1, -1):
         empty = 0
@@ -42,4 +47,4 @@ def convert_field_to_fen(field: np.ndarray, white: bool):
 
         fen += '/'
 
-    return f"{fen} {'w' if white else 'b'}"
+    return f"{fen} {side_to_fen[side]}"
