@@ -1,12 +1,13 @@
 import {io, Socket} from "socket.io-client";
+import {pieceType} from "@/utils/Tama/pieceImg.ts";
 
 export type ServerStatus = 'success' | 'error'
 
 type callbackBase = { status: ServerStatus }
 
 export interface ServerToClientEvents {
-  select: (data: { select: [number, number], highlight: [number, number][] }) => void
-  move: (data: { move: [number, number, number, number], fenStart: string, fenEnd: string }) => void
+  select: (data: { piece: pieceType, select: [number, number], highlight: [number, number][] }) => void
+  move: (data: { piece: pieceType, move: [number, number, number, number], fenStart: string, fenEnd: string }) => void
 }
 
 export interface ClientToServerEvents {

@@ -57,13 +57,14 @@ async def click(sid, data):
     game = games[room]
 
     if game.selected:
-        move, fen_start, fen_end = game.move(*data)
-        if move:
-            return await sio.emit('move', {'move': move, 'fenStart': fen_start, 'fenEnd': fen_end}, room=room)
+        piece, fen_start, fen_end, move = game.move(*data)
+        if piece:
+            return await sio.emit('move', {'move': move, 'piece': piece, 'fenStart': fen_start, 'fenEnd': fen_end},
+                                  room=room)
 
-    highlight = game.select(*data)
-    if highlight:
-        return await sio.emit('select', {'select': data, 'highlight': highlight}, room=room)
+    piece, select, highlight = game.select(*data)
+    if piece:
+        return await sio.emit('select', {'select': select, 'piece': piece, 'highlight': highlight}, room=room)
 
 
 async def makeOpponentMove(data):

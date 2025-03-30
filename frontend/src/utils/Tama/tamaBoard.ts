@@ -47,17 +47,17 @@ export class TamaBoard {
   }
 
   private registerEvents() {
-    socket.on('select', ({select, highlight}) => {
+    socket.on('select', ({piece, select, highlight}) => {
       this.stopShaking()
       this.drawBoard()
       this.highlight(highlight)
-      this.startShaking(...select)
+      this.startShaking(piece, ...select)
     })
 
-    socket.on('move', async ({move, fenStart, fenEnd}) => {
+    socket.on('move', async ({piece, move, fenStart, fenEnd}) => {
       this.stopShaking()
       this.fen = fenStart
-      await this.move(...move)
+      await this.move(piece, ...move)
       this.fen = fenEnd
       this.drawBoard()
     })
@@ -170,25 +170,25 @@ export class TamaBoard {
     }
   }
 
-  startShaking(row: number, col: number) {
+  startShaking(piece: pieceType, row: number, col: number) {
     const [x, y] = this.posToPixels(row, col)
     let shaking = true
 
     const shake = (t: number) => {
       this.drawRect(row, col)
-      this.ctx.drawImage(pieceImg['w'], x + this.imagePad + Math.sin(t / 10) * this.imagePad, y + this.imagePad + Math.cos(t / 4) * this.imagePad, this.cellSize - this.imagePad * 2, this.cellSize - this.imagePad * 2)
+      this.ctx.drawImage(pieceImg[piece], x + this.imagePad + Math.sin(t / 10) * this.imagePad, y + this.imagePad + Math.cos(t / 4) * this.imagePad, this.cellSize - this.imagePad * 2, this.cellSize - this.imagePad * 2)
       if (shaking) {
         requestAnimationFrame(() => shake(t + 1))
       } else {
         this.drawRect(row, col)
-        this.drawPiece(row, col, 'w')
+        this.drawPiece(row, col, piece)
       }
     }
     shake(0)
     this.stopShaking = () => shaking = false
   }
 
-  move(fromRow: number, fromCol: number, toRow: number, toCol: number) {
+  move(piece: pieceType, fromRow: number, fromCol: number, toRow: number, toCol: number) {
     return new Promise<void>((resolve, reject) => {
       if (fromRow == toRow && fromCol == toCol) return
       this.moving = true
@@ -211,7 +211,7 @@ export class TamaBoard {
         }
 
         this.drawBoard()
-        this.ctx.drawImage(pieceImg['w'], x + this.imagePad, y + this.imagePad, this.cellSize - this.imagePad * 2, this.cellSize - this.imagePad * 2)
+        this.ctx.drawImage(pieceImg[piece], x + this.imagePad, y + this.imagePad, this.cellSize - this.imagePad * 2, this.cellSize - this.imagePad * 2)
 
         if (x == toX && y == toY) {
           resolve()

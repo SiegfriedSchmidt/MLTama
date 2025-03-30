@@ -1,7 +1,7 @@
 import numpy as np
 from socketio import AsyncServer
 
-from lib.tama.fen import convert_fen_to_field, convert_field_to_fen
+from lib.tama.fen import convert_fen_to_field, convert_field_to_fen, piece_to_char
 
 
 class Game:
@@ -9,22 +9,23 @@ class Game:
         self.field = convert_fen_to_field(fen)
         self.room = room
         self.sio = sio
-        self.selected = None
+        self.selected: tuple[int, int] | None = None
 
     @property
     def fen(self):
         return convert_field_to_fen(self.field, True)
 
-    def select(self, row: int, col: int):
+    def select(self, row: int, col: int) -> tuple[str, tuple[int, int], list[tuple[int, int]]]:
         if self.field[row, col] > 0:
             self.selected = row, col
-            return [(row - 1, col - 1), (row - 1, col), (row - 1, col + 1)]
+            return piece_to_char[self.field[row, col]], (row, col), [(row - 1, col - 1), (row - 1, col),
+                                                                     (row - 1, col + 1)]
         else:
-            return []
+            return '', (0, 0), [(0, 0)]
 
-    def move(self, row: int, col: int):
-        if self.field[row, col] <= 0:
-            move = [*self.selected, row, col]
+    def move(self, row: int, col: int) -> tuple[str, str, str, tuple[int, int, int, int]]:
+        if self.selected and self.field[row, col] <= 0:
+            move = (self.selected[0], self.selected[1], row, col)
             piece = self.field[*self.selected]
 
             self.field[*self.selected] = 0
@@ -34,6 +35,6 @@ class Game:
             end_fen = self.fen
 
             self.selected = None
-            return move, start_fen, end_fen
+            return piece_to_char[self.field[row, col]], start_fen, end_fen, move
         else:
-            return [], '', ''
+            return '', '', '', (0, 0, 0, 0)
