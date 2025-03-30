@@ -17,6 +17,9 @@ class Game:
 
     def select(self, row: int, col: int) -> tuple[str, tuple[int, int], list[tuple[int, int]]]:
         if self.field[row, col] > 0:
+            if self.selected == (row, col):
+                return '', (0, 0), [(0, 0)]
+
             self.selected = row, col
             return piece_to_char[self.field[row, col]], (row, col), [(row - 1, col - 1), (row - 1, col),
                                                                      (row - 1, col + 1)]

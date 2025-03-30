@@ -174,17 +174,18 @@ export class TamaBoard {
     const [x, y] = this.posToPixels(row, col)
     let shaking = true
 
-    const shake = (t: number) => {
+    const shake = (startT: number, curT: number) => {
+      const t = (curT - startT) / 16
       this.drawRect(row, col)
       this.ctx.drawImage(pieceImg[piece], x + this.imagePad + Math.sin(t / 10) * this.imagePad, y + this.imagePad + Math.cos(t / 4) * this.imagePad, this.cellSize - this.imagePad * 2, this.cellSize - this.imagePad * 2)
       if (shaking) {
-        requestAnimationFrame(() => shake(t + 1))
+        requestAnimationFrame((time) => startT ? shake(startT, time) : shake(time, time))
       } else {
         this.drawRect(row, col)
         this.drawPiece(row, col, piece)
       }
     }
-    shake(0)
+    requestAnimationFrame((time) => shake(time, time))
     this.stopShaking = () => shaking = false
   }
 
@@ -201,7 +202,8 @@ export class TamaBoard {
       const dirX = vx / len
       const dirY = vy / len
 
-      const move = (t: number) => {
+      const move = (startT: number, curT: number) => {
+        const t = (curT - startT) / 16
         let x = dirX * this.moveVelocity * t + fromX
         let y = dirY * this.moveVelocity * t + fromY
 
@@ -217,11 +219,10 @@ export class TamaBoard {
           resolve()
           this.moving = false
         } else {
-          requestAnimationFrame(() => move(t + 1))
+          requestAnimationFrame((time) => startT ? move(startT, time) : move(time, time))
         }
       }
-
-      move(0)
+      requestAnimationFrame((time) => move(time, time))
     })
   }
 }
