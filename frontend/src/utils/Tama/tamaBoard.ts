@@ -1,20 +1,24 @@
 import {isCharNumber} from "@/utils/helpers.ts";
 import {boardColor} from "@/styles/GlobalStyles.tsx";
-import {isPiece, pieceImg, pieceType} from "@/utils/pieceImg.ts";
+import {isPiece, pieceImg, pieceType} from "@/utils/Tama/pieceImg.ts";
+import {socket} from "@/socket.ts";
 
-export class Tama {
+export class TamaBoard {
   private readonly ctx: CanvasRenderingContext2D;
+  private fen = ''
   private gridSize = 8
   private lineWidth = 5
   private imagePad = 6
   private cellSize = 96
+  private moveVelocity = 5
   private size = this.gridSize * (this.cellSize + this.lineWidth) + this.lineWidth
 
-  public selected: [number, number] | null = null
+  private stopShaking = () => {
+  }
+  private moving = false;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
-    private FEN: string
   ) {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Canvas graphics not supported!");
@@ -27,7 +31,44 @@ export class Tama {
     this.canvas.height = this.size
   }
 
-  drawBoard() {
+  startGame(room: string, onStart: (room: string) => void) {
+    this.registerEvents()
+    socket.emit('start', room, ({status, room, fen}) => {
+      if (status === 'success') {
+        this.fen = fen
+        this.drawBoard()
+        onStart(room)
+      }
+    })
+  }
+
+  endGame() {
+    this.unregisterEvents()
+  }
+
+  private registerEvents() {
+    socket.on('select', ({select, highlight}) => {
+      this.stopShaking()
+      this.drawBoard()
+      this.highlight(highlight)
+      this.startShaking(...select)
+    })
+
+    socket.on('move', async ({move, fenStart, fenEnd}) => {
+      this.stopShaking()
+      this.fen = fenStart
+      await this.move(...move)
+      this.fen = fenEnd
+      this.drawBoard()
+    })
+  }
+
+  private unregisterEvents() {
+    socket.off('select');
+    socket.off('move')
+  }
+
+  private drawBoard() {
     this.ctx.fillStyle = boardColor
     this.ctx.fillRect(this.lineWidth / 2, this.lineWidth / 2, this.size - this.lineWidth, this.size - this.lineWidth);
 
@@ -91,7 +132,7 @@ export class Tama {
 
     this.ctx.fillStyle = 'blue'
 
-    for (const char of this.FEN.split(' ')[0]) {
+    for (const char of this.fen.split(' ')[0]) {
       if (char === '/') {
         --row
         col = 0
@@ -118,43 +159,69 @@ export class Tama {
 
     const [row, col] = this.pixelsToPos((eventX - rect.left) * scaleX, (eventY - rect.top) * scaleY)
 
-    if (this.selected) {
-      this.move(...this.selected, row, col)
-      this.selected = null
-      return
+    if (!this.moving) {
+      socket.emit('click', [row, col])
     }
+  }
 
-    this.selected = [row, col]
-    this.startShaking(row, col)
+  highlight(cells: [number, number][]) {
+    for (const [lightRow, lightCol] of cells) {
+      this.drawCircle(lightRow, lightCol)
+    }
   }
 
   startShaking(row: number, col: number) {
     const [x, y] = this.posToPixels(row, col)
-    this.drawCircle(row - 1, col - 1)
-    this.drawCircle(row - 1, col)
-    this.drawCircle(row - 1, col + 1)
+    let shaking = true
+
     const shake = (t: number) => {
       this.drawRect(row, col)
       this.ctx.drawImage(pieceImg['w'], x + this.imagePad + Math.sin(t / 10) * this.imagePad, y + this.imagePad + Math.cos(t / 4) * this.imagePad, this.cellSize - this.imagePad * 2, this.cellSize - this.imagePad * 2)
-      if (this.selected) requestAnimationFrame(() => shake(t + 1))
+      if (shaking) {
+        requestAnimationFrame(() => shake(t + 1))
+      } else {
+        this.drawRect(row, col)
+        this.drawPiece(row, col, 'w')
+      }
     }
     shake(0)
+    this.stopShaking = () => shaking = false
   }
 
   move(fromRow: number, fromCol: number, toRow: number, toCol: number) {
-    const [fromX, fromY] = this.posToPixels(fromRow, fromCol)
-    const [toX, toY] = this.posToPixels(toRow, toCol)
+    return new Promise<void>((resolve, reject) => {
+      if (fromRow == toRow && fromCol == toCol) return
+      this.moving = true
 
-    const move = (t: number) => {
-      const step = t * 2
-      const x = (toX - fromX) / 100 * step + fromX
-      const y = (toY - fromY) / 100 * step + fromY
-      this.drawBoard()
-      this.ctx.drawImage(pieceImg['w'], x + this.imagePad, y + this.imagePad, this.cellSize - this.imagePad * 2, this.cellSize - this.imagePad * 2)
+      const [fromX, fromY] = this.posToPixels(fromRow, fromCol)
+      const [toX, toY] = this.posToPixels(toRow, toCol)
 
-      if (step < 100) requestAnimationFrame(() => move(t + 1))
-    }
+      const [vx, vy] = [toX - fromX, toY - fromY]
+      const len = Math.sqrt(vx * vx + vy * vy)
+      const dirX = vx / len
+      const dirY = vy / len
 
-    move(0)
+      const move = (t: number) => {
+        let x = dirX * this.moveVelocity * t + fromX
+        let y = dirY * this.moveVelocity * t + fromY
+
+        if ((dirX * (x - toX) >= 0) && (dirY * (y - toY) >= 0)) {
+          x = toX
+          y = toY
+        }
+
+        this.drawBoard()
+        this.ctx.drawImage(pieceImg['w'], x + this.imagePad, y + this.imagePad, this.cellSize - this.imagePad * 2, this.cellSize - this.imagePad * 2)
+
+        if (x == toX && y == toY) {
+          resolve()
+          this.moving = false
+        } else {
+          requestAnimationFrame(() => move(t + 1))
+        }
+      }
+
+      move(0)
+    })
   }
 }

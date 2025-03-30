@@ -1,23 +1,31 @@
-import React, {CanvasHTMLAttributes, MouseEvent, FC, useEffect, useRef, useState} from 'react';
-import {Tama} from "@/utils/Graphics/tama.ts";
+import React, {MouseEvent, FC, useEffect, useRef, useState} from 'react';
+import {TamaBoard} from "@/utils/Tama/tamaBoard.ts";
 import {Box} from "@chakra-ui/react";
 
-const Board: FC = () => {
+interface Props {
+  setRoom: (room: string) => void
+  room: string
+}
+
+const Board: FC<Props> = ({room, setRoom}) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const tamaRef = useRef<Tama | null>(null)
+  const tamaBoardRef = useRef<TamaBoard | null>(null)
 
   useEffect(() => {
     if (canvasRef.current) {
-      const tama = new Tama(canvasRef.current, '8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w')
-      tamaRef.current = tama
-      tama.drawBoard()
+      tamaBoardRef.current = new TamaBoard(canvasRef.current)
+      tamaBoardRef.current.startGame(room, setRoom)
     }
-  }, [canvasRef]);
+
+    return () => {
+      if (tamaBoardRef.current) tamaBoardRef.current.endGame()
+    }
+  }, [canvasRef, setRoom]);
 
   function handleBoardClick(event: MouseEvent) {
-    if (!canvasRef.current || !tamaRef.current) return
+    if (!tamaBoardRef.current) return
 
-    tamaRef.current.onClick(event.clientX, event.clientY)
+    tamaBoardRef.current.onClick(event.clientX, event.clientY)
   }
 
   return (

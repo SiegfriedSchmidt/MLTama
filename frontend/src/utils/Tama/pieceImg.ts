@@ -1,7 +1,7 @@
-import b from '../assets/pieces/bman.png'
-import B from '../assets/pieces/bdamone.png'
-import w from '../assets/pieces/wman.png'
-import W from '../assets/pieces/wdamone.png'
+import b from '../../assets/pieces/bman.png'
+import B from '../../assets/pieces/bdamone.png'
+import w from '../../assets/pieces/wman.png'
+import W from '../../assets/pieces/wdamone.png'
 
 export type pieceType = 'w' | 'W' | 'b' | 'B'
 
