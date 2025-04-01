@@ -1,5 +1,6 @@
 from socketio import AsyncServer
 from lib.tama.fen import fen_to_field, field_to_fen, piece_to_char, fen_to_side
+from lib.tama.rules import show_possible_for_piece, get_possible_moves, is_possible_move, make_move, print_moves
 
 
 class Game:
@@ -15,28 +16,39 @@ class Game:
         return field_to_fen(self.field, self.side)
 
     def select(self, row: int, col: int) -> tuple[str, tuple[int, int], list[tuple[int, int]]]:
-        if self.field[row, col] > 0:
-            if self.selected == (row, col):
-                return '', (0, 0), [(0, 0)]
+        if self.selected == (row, col):
+            return '', (0, 0), [(0, 0)]
 
+        moves = get_possible_moves(self.field, self.side)
+        possible = show_possible_for_piece(row, col, moves)
+        print(possible)
+        if possible:
             self.selected = row, col
-            return piece_to_char[self.field[row, col]], (row, col), [(row - 1, col - 1), (row - 1, col),
-                                                                     (row - 1, col + 1)]
+            return piece_to_char[self.field[self.selected]], self.selected, possible
         else:
             return '', (0, 0), [(0, 0)]
 
     def move(self, row: int, col: int) -> tuple[str, str, str, tuple[int, int, int, int]]:
-        if self.selected and self.field[row, col] <= 0:
+        if not self.selected:
+            return '', '', '', (0, 0, 0, 0)
+
+        moves = get_possible_moves(self.field, self.side)
+        change_side = moves[0, 1] <= 1
+        move_idx = is_possible_move(*self.selected, row, col, moves)
+        if move_idx:
             move = (self.selected[0], self.selected[1], row, col)
-            piece = self.field[*self.selected]
+            piece = self.field[self.selected]
 
-            self.field[*self.selected] = 0
+            self.field[self.selected] = 0
             start_fen = self.fen
+            self.field[self.selected] = piece
 
-            self.field[row, col] = piece
+            make_move(move_idx, self.field, moves)
             end_fen = self.fen
 
             self.selected = None
-            return piece_to_char[self.field[row, col]], start_fen, end_fen, move
+            if change_side:
+                self.side *= -1
+            return piece_to_char[piece], start_fen, end_fen, move
         else:
             return '', '', '', (0, 0, 0, 0)

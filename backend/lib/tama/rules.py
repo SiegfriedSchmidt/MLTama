@@ -84,8 +84,8 @@ def find_moves_for_piece(field, side, row, col):
             row2 = row
             col2 = col
             while True:
-                row2 += kcd[i, 0]
-                col2 += + kcd[i, 1]
+                row2 += kd[i, 0]
+                col2 += + kd[i, 1]
                 if not on_board(row2, col2) or field[row2, col2] != 0:
                     break
 
@@ -211,7 +211,7 @@ def get_possible_moves(field: np.ndarray, side: int):
 def is_possible_move(from_row, from_col, to_row, to_col, moves):
     max_capture = moves[0, 1]
     if max_capture:
-        for i in range(1, moves[0, 0], max_capture):
+        for i in range(1, moves[0, 0], max_capture + 1):
             row, col = moves[i, 0], moves[i, 1]
             row2, col2 = moves[i + 1, 2], moves[i + 1, 3]
             if from_row == row and from_col == col and to_row == row2 and to_col == col2:
@@ -237,6 +237,33 @@ def make_move(move_idx, field, moves):
         make_move_without_capture(field, row, col, row2, col2, promoted)
 
 
+def show_possible_for_piece(selected_row, selected_col, moves):
+    possible = []
+    max_capture = moves[0, 1]
+    if max_capture:
+        for i in range(1, moves[0, 0], max_capture + 1):
+            row, col = moves[i, 0], moves[i, 1]
+            row2, col2 = moves[i + 1, 2], moves[i + 1, 3]
+            if selected_row == row and selected_col == col:
+                possible.append((int(row2), int(col2)))
+    else:
+        for i in range(1, moves[0, 0]):
+            row, col, row2, col2, promoted = moves[i]
+            if selected_row == row and selected_col == col:
+                possible.append((int(row2), int(col2)))
+
+    return possible
+
+
+def print_moves(moves):
+    max_capture = moves[0, 1]
+    print(moves[0], '\n')
+    for i in range(1, moves[0, 0]):
+        print(moves[i])
+        if max_capture and (i - 1) % (max_capture + 1) == max_capture:
+            print()
+
+
 # compile
 test_field = fen_to_field('8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w')
 test_moves = get_possible_moves(test_field, 1)
@@ -259,12 +286,7 @@ def main():
     print(start_field)
 
     moves = get_possible_moves(start_field, 1)
-    max_capture = moves[0, 1]
-    print(moves[0], '\n')
-    for i in range(1, moves[0, 0]):
-        print(moves[i])
-        if max_capture and (i - 1) % (max_capture + 1) == max_capture:
-            print()
+    print_moves(moves)
 
     idx = is_possible_move(4, 6, 4, 4, moves)
     make_move(idx, start_field, moves)
