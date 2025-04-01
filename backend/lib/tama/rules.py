@@ -22,9 +22,6 @@ kcd = np.array([[0, -1], [-1, 0], [0, 1], [1, 0]], dtype=np.int8)
 # king directions without capture
 kd = np.array([[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]], dtype=np.int8)
 
-# label to determine capture in moves array
-CAPTURE_LABEL = 9
-
 
 @njit()
 def on_board(row, col):
@@ -153,7 +150,7 @@ def find_possible_capture(field, side, row, col, depth, max_depth, piece_idx, mo
     for row2, col2, row3, col3, promoted in find_capture_for_piece_with_capture(field, side, row, col):
         cnt = find_possible_capture(field, side, row3, col3, depth + 1, max_depth, piece_idx, moves)
         for i in range(cnt):
-            moves[(piece_idx + i) * (max_depth + 1) + depth + 1] = row2, col2, row3, col3, promoted
+            moves[(piece_idx + i) * (max_depth + 1) + depth + 2] = row2, col2, row3, col3, promoted
 
         piece_idx += cnt
 
@@ -167,7 +164,7 @@ def find_field_possible_capture(field, side, max_capture, moves):
         for col in range(field.shape[1]):
             cnt = find_possible_capture(field, side, row, col, 0, max_capture, piece_idx, moves)
             for i in range(cnt):
-                moves[(piece_idx + i) * (max_capture + 1)] = row, col, max_capture, 9, 0
+                moves[(piece_idx + i) * (max_capture + 1) + 1] = row, col, 0, 0, 0
 
             piece_idx += cnt
     return piece_idx
@@ -179,39 +176,75 @@ def find_field_possible_moves(field, side, moves):
     for row in range(field.shape[0]):
         for col in range(field.shape[1]):
             for row2, col2, promoted in find_moves_for_piece(field, side, row, col):
-                moves[piece_idx] = row, col, row2, col2, promoted
+                moves[piece_idx + 1] = row, col, row2, col2, promoted
                 piece_idx += 1
     return piece_idx
 
 
 @njit()
 def get_possible_moves(field: np.ndarray, side: int):
-    # moves array has two purposes: 1) save non capture moves 2) save capture moves
-    # structure for two cases:
-    # 1) saving move (from_row, from_col, to_row, to_col, promoted)
-    # 2) saving sequences of captures
+    # moves array has three purposes: 1) save metadata 2) save non capture moves 3) save capture moves
+    # structure for three cases:
+    # 1) saving metadata in first index (reserved):
+    # (index_end_of_array, max_capture, 0, 0, 0)
+    # 2) saving move (from_row, from_col, to_row, to_col, promoted)
+    # 3) saving sequences of captures
     # first element in every sequence:
-    # (row, col, capture_depth, 0, 0)
+    # (row, col, 0, 0, 0)
     # other elements are elements of sequence itself size of capture_depth:
     # (captured_row, captured_col, new_row, new_col, promoted)
 
-    moves = np.zeros((200, 5), dtype=np.int8)
+    moves = np.zeros((200, 5), dtype=np.uint8)
+    moves[0] = 0, 0, 0, 0, 0
 
     max_capture = find_field_capture_max_depth(field, side)
+    moves[0, 1] = max_capture
     if max_capture > 0:
-        moves_idx = find_field_possible_capture(field, side, max_capture, moves) * (max_capture + 1)
+        moves[0, 0] = find_field_possible_capture(field, side, max_capture, moves) * (max_capture + 1) + 1
     else:
-        moves_idx = find_field_possible_moves(field, side, moves)
+        moves[0, 0] = find_field_possible_moves(field, side, moves) + 1
 
-    for i in range(moves_idx):
-        print(moves[i])
-        if moves[0, 3] == 9 and i % (max_capture + 1) == max_capture:
-            print()
-
-    return moves_idx, moves
+    return moves
 
 
-if __name__ == '__main__':
+@njit()
+def is_possible_move(from_row, from_col, to_row, to_col, moves):
+    max_capture = moves[0, 1]
+    if max_capture:
+        for i in range(1, moves[0, 0], max_capture):
+            row, col = moves[i, 0], moves[i, 1]
+            row2, col2 = moves[i + 1, 2], moves[i + 1, 3]
+            if from_row == row and from_col == col and to_row == row2 and to_col == col2:
+                return i
+    else:
+        for i in range(1, moves[0, 0]):
+            row, col, row2, col2, promoted = moves[i]
+            if from_row == row and from_col == col and to_row == row2 and to_col == col2:
+                return i
+    return 0
+
+
+@njit()
+def make_move(move_idx, field, moves):
+    max_capture = moves[0, 1]
+    if max_capture:
+        row, col = moves[move_idx, 0:2]
+        row2, col2, row3, col3, promoted = moves[move_idx + 1]
+
+        make_move_with_capture(field, row, col, row2, col2, row3, col3, promoted)
+    else:
+        row, col, row2, col2, promoted = moves[move_idx]
+        make_move_without_capture(field, row, col, row2, col2, promoted)
+
+
+# compile
+test_field = fen_to_field('8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w')
+test_moves = get_possible_moves(test_field, 1)
+test_idx = is_possible_move(5, 0, 4, 0, test_moves)
+make_move(test_idx, test_field, test_moves)
+
+
+def main():
     # start_field = fen_to_field('8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w')
     start_field = np.array([
         [0, 0, 0, 0, 0, -1, 0, 0],
@@ -224,19 +257,24 @@ if __name__ == '__main__':
         [0, 0, 0, 0, 0, 0, 0, 0],
     ], dtype=np.int8)
     print(start_field)
-    get_possible_moves(start_field, 1)
 
-'''
-3
-[[5 1 3 0]
- [4 1 3 1]
- [3 2 3 3]
- [3 4 3 5]]
-[[5 5 3 0]
- [4 5 3 5]
- [3 4 3 3]
- [3 2 3 1]]
-'''
+    moves = get_possible_moves(start_field, 1)
+    max_capture = moves[0, 1]
+    print(moves[0], '\n')
+    for i in range(1, moves[0, 0]):
+        print(moves[i])
+        if max_capture and (i - 1) % (max_capture + 1) == max_capture:
+            print()
+
+    idx = is_possible_move(4, 6, 4, 4, moves)
+    make_move(idx, start_field, moves)
+    print(start_field)
+    print(is_possible_move(4, 6, 4, 5, moves))
+
+
+if __name__ == '__main__':
+    main()
+
 '''
 Цель игры
 Целью игры Тама является захват всех шашек противника или лишение их возможности хода.
