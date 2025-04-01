@@ -36,7 +36,7 @@ def is_promoted(side, row):
 # TODO: king cannot capture backwards
 # future idea, keeping possible moves while searching capture, if capture detected alter saving moves
 @njit()
-def find_capture_for_piece(field, side, row, col):
+def find_capture_for_piece(field, side, row, col, pr_dir):
     if field[row, col] * side == 1:
         for i in range(mcd[side].shape[0]):
             row2 = row + mcd[side, i, 0]
@@ -45,10 +45,13 @@ def find_capture_for_piece(field, side, row, col):
                 row3 = row2 + mcd[side, i, 0]
                 col3 = col2 + mcd[side, i, 1]
                 if on_board(row3, col3) and field[row3, col3] == 0:
-                    yield row2, col2, row3, col3, is_promoted(side, row3)
+                    yield row2, col2, row3, col3, is_promoted(side, row3), 0
 
     elif field[row, col] * side == 2:
         for i in range(kcd.shape[0]):
+            if pr_dir and i == (pr_dir + 1) % 4:
+                continue
+
             row2 = row
             col2 = col
             while True:
@@ -66,7 +69,7 @@ def find_capture_for_piece(field, side, row, col):
                         if not on_board(row3, col3) or field[row3, col3] * side != 0:
                             break
 
-                        yield row2, col2, row3, col3, 0
+                        yield row2, col2, row3, col3, 0, i + 1
                     break
 
 
@@ -116,17 +119,17 @@ def make_move_with_capture_reverted(field, row, col, row2, col2, row3, col3, pro
 
 
 @njit()
-def find_capture_for_piece_with_capture(field, side, row, col):
-    for row2, col2, row3, col3, promoted in find_capture_for_piece(field, side, row, col):
+def find_capture_for_piece_with_capture(field, side, row, col, pr_dir):
+    for row2, col2, row3, col3, promoted, cur_dir in find_capture_for_piece(field, side, row, col, pr_dir):
         for _ in make_move_with_capture_reverted(field, row, col, row2, col2, row3, col3, promoted):
-            yield row2, col2, row3, col3, promoted
+            yield row2, col2, row3, col3, promoted, cur_dir
 
 
 @njit()
-def find_capture_max_depth(field, side, row, col, depth):
+def find_capture_max_depth(field, side, row, col, pr_dir, depth):
     max_depth = depth
-    for _, _, row3, col3, _ in find_capture_for_piece_with_capture(field, side, row, col):
-        max_depth = max(max_depth, find_capture_max_depth(field, side, row3, col3, depth + 1))
+    for _, _, row3, col3, _, cur_dir in find_capture_for_piece_with_capture(field, side, row, col, pr_dir):
+        max_depth = max(max_depth, find_capture_max_depth(field, side, row3, col3, cur_dir, depth + 1))
 
     return max_depth
 
@@ -136,19 +139,19 @@ def find_field_capture_max_depth(field, side):
     max_capture = 0
     for row in range(field.shape[0]):
         for col in range(field.shape[1]):
-            max_capture = max(max_capture, find_capture_max_depth(field, side, row, col, 0))
+            max_capture = max(max_capture, find_capture_max_depth(field, side, row, col, 0, 0))
 
     return max_capture
 
 
 @njit()
-def find_possible_capture(field, side, row, col, depth, max_depth, piece_idx, moves):
+def find_possible_capture(field, side, row, col, pr_dir, depth, max_depth, piece_idx, moves):
     if depth == max_depth:
         return 1
 
     piece_offset = piece_idx
-    for row2, col2, row3, col3, promoted in find_capture_for_piece_with_capture(field, side, row, col):
-        cnt = find_possible_capture(field, side, row3, col3, depth + 1, max_depth, piece_idx, moves)
+    for row2, col2, row3, col3, promoted, cur_dir in find_capture_for_piece_with_capture(field, side, row, col, pr_dir):
+        cnt = find_possible_capture(field, side, row3, col3, cur_dir, depth + 1, max_depth, piece_idx, moves)
         for i in range(cnt):
             moves[(piece_idx + i) * (max_depth + 1) + depth + 2] = row2, col2, row3, col3, promoted
 
@@ -162,7 +165,7 @@ def find_field_possible_capture(field, side, max_capture, moves):
     piece_idx = 0
     for row in range(field.shape[0]):
         for col in range(field.shape[1]):
-            cnt = find_possible_capture(field, side, row, col, 0, max_capture, piece_idx, moves)
+            cnt = find_possible_capture(field, side, row, col, 0, 0, max_capture, piece_idx, moves)
             for i in range(cnt):
                 moves[(piece_idx + i) * (max_capture + 1) + 1] = row, col, 0, 0, 0
 
