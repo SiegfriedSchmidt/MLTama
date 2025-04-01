@@ -59,6 +59,7 @@ export class TamaBoard {
       this.fen = fenStart
       await this.move(piece, ...move)
       this.fen = fenEnd
+      console.log(this.fen)
       this.drawBoard()
     })
   }

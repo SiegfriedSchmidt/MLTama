@@ -7,6 +7,7 @@ class Game:
     def __init__(self, fen: str, room: str, sio: AsyncServer):
         self.field = fen_to_field(fen)
         self.side = fen_to_side(fen)
+        self.moves = get_possible_moves(self.field, self.side)
         self.room = room
         self.sio = sio
         self.selected: tuple[int, int] | None = None
@@ -19,8 +20,7 @@ class Game:
         if self.selected == (row, col):
             return '', (0, 0), [(0, 0)]
 
-        moves = get_possible_moves(self.field, self.side)
-        possible = show_possible_for_piece(row, col, moves)
+        possible = show_possible_for_piece(row, col, self.moves)
         print(possible)
         if possible:
             self.selected = row, col
@@ -32,9 +32,8 @@ class Game:
         if not self.selected:
             return '', '', '', (0, 0, 0, 0)
 
-        moves = get_possible_moves(self.field, self.side)
-        change_side = moves[0, 1] <= 1
-        move_idx = is_possible_move(*self.selected, row, col, moves)
+        change_side = self.moves[0, 1] <= 1
+        move_idx = is_possible_move(*self.selected, row, col, self.moves)
         if move_idx:
             move = (self.selected[0], self.selected[1], row, col)
             piece = self.field[self.selected]

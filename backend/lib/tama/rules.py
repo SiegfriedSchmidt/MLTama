@@ -1,5 +1,5 @@
 import numpy as np
-from numba import njit, types, typeof
+from numba import njit
 from lib.tama.fen import fen_to_field
 
 # men directions with capture
@@ -167,7 +167,7 @@ def find_field_possible_capture(field, side, max_capture, moves):
         for col in range(field.shape[1]):
             cnt = find_possible_capture(field, side, row, col, 0, 0, max_capture, piece_idx, moves)
             for i in range(cnt):
-                moves[(piece_idx + i) * (max_capture + 1) + 1] = row, col, 0, 0, 0
+                moves[(piece_idx + i) * (max_capture + 1) + 1] = 0, 0, row, col, 0
 
             piece_idx += cnt
     return piece_idx
@@ -193,7 +193,7 @@ def get_possible_moves(field: np.ndarray, side: int):
     # 2) saving move (from_row, from_col, to_row, to_col, promoted)
     # 3) saving sequences of captures
     # first element in every sequence:
-    # (row, col, 0, 0, 0)
+    # (0, 0, row, col, 0)
     # other elements are elements of sequence itself size of capture_depth:
     # (captured_row, captured_col, new_row, new_col, promoted)
 
@@ -211,27 +211,10 @@ def get_possible_moves(field: np.ndarray, side: int):
 
 
 @njit()
-def is_possible_move(from_row, from_col, to_row, to_col, moves):
-    max_capture = moves[0, 1]
-    if max_capture:
-        for i in range(1, moves[0, 0], max_capture + 1):
-            row, col = moves[i, 0], moves[i, 1]
-            row2, col2 = moves[i + 1, 2], moves[i + 1, 3]
-            if from_row == row and from_col == col and to_row == row2 and to_col == col2:
-                return i
-    else:
-        for i in range(1, moves[0, 0]):
-            row, col, row2, col2, promoted = moves[i]
-            if from_row == row and from_col == col and to_row == row2 and to_col == col2:
-                return i
-    return 0
-
-
-@njit()
 def make_move(move_idx, field, moves):
     max_capture = moves[0, 1]
     if max_capture:
-        row, col = moves[move_idx, 0:2]
+        row, col = moves[move_idx, 2:4]
         row2, col2, row3, col3, promoted = moves[move_idx + 1]
 
         make_move_with_capture(field, row, col, row2, col2, row3, col3, promoted)
@@ -240,20 +223,38 @@ def make_move(move_idx, field, moves):
         make_move_without_capture(field, row, col, row2, col2, promoted)
 
 
-def show_possible_for_piece(selected_row, selected_col, moves):
-    possible = []
+def show_possible_moves(moves: np.ndarray, prev_sequences: list[int]):
     max_capture = moves[0, 1]
+    possible: dict[tuple[int, int], dict[tuple[int, int], list[int]]] = {}
+
     if max_capture:
-        for i in range(1, moves[0, 0], max_capture + 1):
-            row, col = moves[i, 0], moves[i, 1]
-            row2, col2 = moves[i + 1, 2], moves[i + 1, 3]
-            if selected_row == row and selected_col == col:
-                possible.append((int(row2), int(col2)))
+        if prev_sequences:
+            for i in prev_sequences:
+                row, col, row2, col2 = int(moves[i, 2]), int(moves[i, 3]), int(moves[i + 1, 2]), int(moves[i + 1, 3])
+                if (row, col) not in possible:
+                    possible[row, col] = {}
+                if (row2, col2) not in possible[row, col]:
+                    possible[row, col][row2, col2] = []
+
+                possible[row, col][row2, col2].append(i)
+        else:
+            for i in range(1, moves[0, 0], max_capture + 1):
+                row, col, row2, col2 = int(moves[i, 2]), int(moves[i, 3]), int(moves[i + 1, 2]), int(moves[i + 1, 3])
+                if (row, col) not in possible:
+                    possible[row, col] = {}
+                if (row2, col2) not in possible[row, col]:
+                    possible[row, col][row2, col2] = []
+
+                possible[row, col][row2, col2].append(i)
     else:
         for i in range(1, moves[0, 0]):
-            row, col, row2, col2, promoted = moves[i]
-            if selected_row == row and selected_col == col:
-                possible.append((int(row2), int(col2)))
+            row, col, row2, col2 = int(moves[i, 0]), int(moves[i, 1]), int(moves[i, 2]), int(moves[i, 3])
+            if (row, col) not in possible:
+                possible[row, col] = {}
+            if (row2, col2) not in possible[row, col]:
+                possible[row, col][row2, col2] = []
+
+            possible[row, col][row2, col2].append(i)
 
     return possible
 
@@ -270,8 +271,7 @@ def print_moves(moves):
 # compile
 test_field = fen_to_field('8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w')
 test_moves = get_possible_moves(test_field, 1)
-test_idx = is_possible_move(5, 0, 4, 0, test_moves)
-make_move(test_idx, test_field, test_moves)
+make_move(1, test_field, test_moves)
 
 
 def main():
@@ -290,11 +290,6 @@ def main():
 
     moves = get_possible_moves(start_field, 1)
     print_moves(moves)
-
-    idx = is_possible_move(4, 6, 4, 4, moves)
-    make_move(idx, start_field, moves)
-    print(start_field)
-    print(is_possible_move(4, 6, 4, 5, moves))
 
 
 if __name__ == '__main__':
