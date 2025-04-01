@@ -2,19 +2,28 @@ import numpy as np
 from numba import njit, types, typeof
 from lib.tama.fen import fen_to_field
 
+# men directions with capture
 mcd = np.array([
     [[0, 0], [0, 0], [0, 0]],  # stub
     [[0, -1], [-1, 0], [0, 1]],  # for white
     [[0, -1], [1, 0], [0, 1]],  # for black
-], dtype=np.int8)  # men directions with capture
+], dtype=np.int8)
+
+# men directions without capture
 md = np.array([
     [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]],  # stub
     [[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]],  # for white
     [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1]],  # for black
-], dtype=np.int8)  # men directions without capture
-kcd = np.array([[0, -1], [-1, 0], [0, 1], [1, 0]], dtype=np.int8)  # king directions with capture
-kd = np.array([[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]],
-              dtype=np.int8)  # king directions without capture
+], dtype=np.int8)
+
+# king directions with capture
+kcd = np.array([[0, -1], [-1, 0], [0, 1], [1, 0]], dtype=np.int8)
+
+# king directions without capture
+kd = np.array([[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]], dtype=np.int8)
+
+# label to determine capture in moves array
+CAPTURE_LABEL = 9
 
 
 @njit()
@@ -87,20 +96,33 @@ def find_moves_for_piece(field, side, row, col):
 
 
 @njit()
+def make_move_without_capture(field, row, col, row2, col2, promoted):
+    field[row2, col2] = field[row, col] * (2 if promoted else 1)
+    field[row, col] = 0
+
+
+@njit()
+def make_move_with_capture(field, row, col, row2, col2, row3, col3, promoted):
+    make_move_without_capture(field, row, col, row3, col3, promoted)
+    field[row2, col2] = 0
+
+
+# weird syntax, but works fine almost like "with" in python
+@njit()
+def make_move_with_capture_reverted(field, row, col, row2, col2, row3, col3, promoted):
+    captured_piece = field[row2, col2]
+    piece = field[row, col]
+    yield make_move_with_capture(field, row, col, row2, col2, row3, col3, promoted)
+    field[row2, col2] = captured_piece
+    field[row, col] = piece
+    field[row3, col3] = 0
+
+
+@njit()
 def find_capture_for_piece_with_capture(field, side, row, col):
     for row2, col2, row3, col3, promoted in find_capture_for_piece(field, side, row, col):
-        captured_piece = field[row2, col2]
-        piece = field[row, col]
-
-        field[row3, col3] = (2 if promoted else 1) * side
-        field[row, col] = 0
-        field[row2, col2] = 0
-
-        yield row2, col2, row3, col3, promoted
-
-        field[row2, col2] = captured_piece
-        field[row, col] = piece
-        field[row3, col3] = 0
+        for _ in make_move_with_capture_reverted(field, row, col, row2, col2, row3, col3, promoted):
+            yield row2, col2, row3, col3, promoted
 
 
 @njit()
