@@ -1,10 +1,17 @@
 import numpy as np
 from numba import njit, types, typeof
-
 from lib.tama.fen import fen_to_field
 
-mcd = np.array([[0, -1], [-1, 0], [0, 1]], dtype=np.int8)  # men directions with capture
-md = np.array([[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]], dtype=np.int8)  # men directions without capture
+mcd = np.array([
+    [[0, 0], [0, 0], [0, 0]],  # stub
+    [[0, -1], [-1, 0], [0, 1]],  # for white
+    [[0, -1], [1, 0], [0, 1]],  # for black
+], dtype=np.int8)  # men directions with capture
+md = np.array([
+    [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]],  # stub
+    [[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]],  # for white
+    [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1]],  # for black
+], dtype=np.int8)  # men directions without capture
 kcd = np.array([[0, -1], [-1, 0], [0, 1], [1, 0]], dtype=np.int8)  # king directions with capture
 kd = np.array([[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]],
               dtype=np.int8)  # king directions without capture
@@ -16,35 +23,69 @@ def on_board(row, col):
 
 
 @njit()
+def is_promoted(side, row):
+    return (side == 1 and row == 0) or (side == -1 and row == 7)
+
+
+# TODO: king cannot capture backwards
+# future idea, keeping possible moves while searching capture, if capture detected alter saving moves
+@njit()
 def find_capture_for_piece(field, side, row, col):
     if field[row, col] * side == 1:
-        for i in range(mcd.shape[0]):
-            row2 = row + mcd[i, 0]
-            col2 = col + mcd[i, 1]
-            if not on_board(row2, col2):
-                continue
-            if field[row2, col2] * side == -1:
-                row3 = row2 + mcd[i, 0]
-                col3 = col2 + mcd[i, 1]
-                if not on_board(row3, col3):
-                    continue
-                if field[row3, col3] == 0:
-                    yield row2, col2, row3, col3, (side == 1 and row3 == 0) or (side == -1 and row3 == 7)
+        for i in range(mcd[side].shape[0]):
+            row2 = row + mcd[side, i, 0]
+            col2 = col + mcd[side, i, 1]
+            if on_board(row2, col2) and field[row2, col2] * side < 0:
+                row3 = row2 + mcd[side, i, 0]
+                col3 = col2 + mcd[side, i, 1]
+                if on_board(row3, col3) and field[row3, col3] == 0:
+                    yield row2, col2, row3, col3, is_promoted(side, row3)
+
+    elif field[row, col] * side == 2:
+        for i in range(kcd.shape[0]):
+            row2 = row
+            col2 = col
+            while True:
+                row2 += kcd[i, 0]
+                col2 += kcd[i, 1]
+                if not on_board(row2, col2) or field[row2, col2] * side > 0:
+                    break
+
+                if field[row2, col2] * side < 0:
+                    row3 = row2
+                    col3 = col2
+                    while True:
+                        row3 += kcd[i, 0]
+                        col3 += kcd[i, 1]
+                        if not on_board(row3, col3) or field[row3, col3] * side != 0:
+                            break
+
+                        yield row2, col2, row3, col3, 0
+                    break
 
 
 @njit()
 def find_moves_for_piece(field, side, row, col):
     if field[row, col] * side == 1:
-        for i in range(md.shape[0]):
-            row2 = row + md[i, 0]
-            col2 = col + md[i, 1]
-            if not on_board(row2, col2) or field[row2, col2] != 0:
-                continue
+        for i in range(md[side].shape[0]):
+            row2 = row + md[side, i, 0]
+            col2 = col + md[side, i, 1]
+            if on_board(row2, col2) and field[row2, col2] == 0:
+                yield row2, col2, is_promoted(side, row2)
 
-            yield row2, col2
+    elif field[row, col] * side == 2:
+        for i in range(kd.shape[0]):
+            row2 = row
+            col2 = col
+            while True:
+                row2 += kcd[i, 0]
+                col2 += + kcd[i, 1]
+                if not on_board(row2, col2) or field[row2, col2] != 0:
+                    break
+
+                yield row2, col2, 0
 
 
-# TODO: men promoted to king and continue capture
 @njit()
 def find_capture_for_piece_with_capture(field, side, row, col):
     for row2, col2, row3, col3, promoted in find_capture_for_piece(field, side, row, col):
@@ -90,7 +131,7 @@ def find_possible_capture(field, side, row, col, depth, max_depth, piece_idx, mo
     for row2, col2, row3, col3, promoted in find_capture_for_piece_with_capture(field, side, row, col):
         cnt = find_possible_capture(field, side, row3, col3, depth + 1, max_depth, piece_idx, moves)
         for i in range(cnt):
-            moves[(piece_idx + i) * max_depth + depth + 1] = row2, col2, row3, col3, 0
+            moves[(piece_idx + i) * (max_depth + 1) + depth + 1] = row2, col2, row3, col3, promoted
 
         piece_idx += cnt
 
@@ -104,10 +145,9 @@ def find_field_possible_capture(field, side, max_capture, moves):
         for col in range(field.shape[1]):
             cnt = find_possible_capture(field, side, row, col, 0, max_capture, piece_idx, moves)
             for i in range(cnt):
-                moves[(piece_idx + i) * max_capture] = row, col, max_capture, 0, 0
+                moves[(piece_idx + i) * (max_capture + 1)] = row, col, max_capture, 9, 0
 
             piece_idx += cnt
-
     return piece_idx
 
 
@@ -116,22 +156,14 @@ def find_field_possible_moves(field, side, moves):
     piece_idx = 0
     for row in range(field.shape[0]):
         for col in range(field.shape[1]):
-            for row2, col2 in find_moves_for_piece(field, side, row, col):
-                moves[piece_idx] = row, col, row2, col2, 0
+            for row2, col2, promoted in find_moves_for_piece(field, side, row, col):
+                moves[piece_idx] = row, col, row2, col2, promoted
                 piece_idx += 1
     return piece_idx
 
 
 @njit()
 def get_possible_moves(field: np.ndarray, side: int):
-    # # dimensions: 0 - idx of sequence, 1 - move idx in sequence, 2 - move (captured_row, captured_col, new_row, new_col)
-    # # first "move" in every sequence (row, col, capture_depth, promoted)
-    # capture = np.zeros((20, 16, 4), dtype=np.int8)
-    # captured_idx = 0
-    # # dimensions: 0 - idx of move, 1 - move (from_row, from_col, to_row, to_col, promoted)
-    # non_capture = np.zeros((168, 5), dtype=np.int8)
-    # non_capture_idx = 0
-
     # moves array has two purposes: 1) save non capture moves 2) save capture moves
     # structure for two cases:
     # 1) saving move (from_row, from_col, to_row, to_col, promoted)
@@ -145,12 +177,14 @@ def get_possible_moves(field: np.ndarray, side: int):
 
     max_capture = find_field_capture_max_depth(field, side)
     if max_capture > 0:
-        moves_idx = find_field_possible_capture(field, side, max_capture, moves) * max_capture
+        moves_idx = find_field_possible_capture(field, side, max_capture, moves) * (max_capture + 1)
     else:
         moves_idx = find_field_possible_moves(field, side, moves)
 
     for i in range(moves_idx):
         print(moves[i])
+        if moves[0, 3] == 9 and i % (max_capture + 1) == max_capture:
+            print()
 
     return moves_idx, moves
 
@@ -158,11 +192,11 @@ def get_possible_moves(field: np.ndarray, side: int):
 if __name__ == '__main__':
     # start_field = fen_to_field('8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w')
     start_field = np.array([
-        [0, 0, 0, 0, 0, 0, 0, 0],
-        [-1, -1, -1, -1, -1, -1, -1, -1],
-        [-1, -1, -1, -1, -1, -1, -1, -1],
+        [0, 0, 0, 0, 0, -1, 0, 0],
+        [-1, -1, -1, -1, -1, 0, -1, -1],
+        [-1, -1, -1, -1, 0, -1, -1, -1],
         [0, 0, -1, 0, -1, 0, 0, 0],
-        [-1, -1, 0, 0, 0, -1, 0, 0],
+        [-1, -1, 0, 0, 0, -1, 1, 0],
         [1, 1, 1, 1, 1, 1, 1, 1],
         [1, 1, 1, 1, 1, 1, 1, 1],
         [0, 0, 0, 0, 0, 0, 0, 0],
