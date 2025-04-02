@@ -29,31 +29,54 @@ async def disconnect(sid):
     print('disconnect ', sid)
 
 
+async def connect_to_room(sid, room, fen):
+    room = room if room else uuid()  # check if client wants specific or random
+    clients[sid].room = room
+    await sio.enter_room(sid, room)
+    if room in games:
+        # existing room
+        print(f'enter existing room {room}')
+        game = games[room]
+    else:
+        # new room
+        print(f'create new room {room}')
+        game = Game(fen, room, sio)
+        games[room] = game
+
+    return await sio.emit('start', {'room': room, 'fen': game.fen}, to=sid)
+
+
 @sio.event
 async def start(sid, data):
-    room = data if data else uuid()
+    if clients[sid].room and clients[sid].room in games:
+        # already have room
+        room = clients[sid].room
+        if data['restart']:
+            print(f'restart game in room {room}')
+            del games[room]
+            game = Game(data['fen'], room, sio)
+            games[room] = game
+            await sio.emit('start', {'room': room, 'fen': game.fen}, room=room)
+        else:
+            # want to join to other room
+            await sio.leave_room(sid, room)
+            await connect_to_room(sid, data['room'], data['fen'])
 
-    clients[sid].room = room
+        return {'status': 'success'}
 
-    if room in games:
-        game = games[room]
-        print(f'Connect to existing room {room}')
-    else:
-        game = Game('8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w', room, sio)
-        games[room] = game
-        print(f'Start game in room: {room}')
+    if data['restart']:
+        return {'status': 'error'}
 
-    await sio.enter_room(sid, room)
-    return {
-        'status': 'success',
-        'room': room,
-        'fen': game.fen
-    }
+    await connect_to_room(sid, data['room'], data['fen'])
+    return {'status': 'success'}
 
 
 @sio.event
 async def click(sid, data):
     room = clients[sid].room
+    if not room:
+        return
+
     game = games[room]
 
     if game.selected:

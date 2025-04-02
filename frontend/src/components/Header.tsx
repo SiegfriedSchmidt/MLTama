@@ -5,7 +5,7 @@ import {Toaster} from "@/components/ui/toaster"
 
 const Header = () => {
   return (
-    <Box position="absolute" m={4}>
+    <Box p={4}>
       <ColorModeButton alignSelf="start"/>
       <Toaster/>
     </Box>

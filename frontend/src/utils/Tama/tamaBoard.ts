@@ -1,7 +1,8 @@
 import {isCharNumber} from "@/utils/helpers.ts";
 import {boardColor} from "@/styles/GlobalStyles.tsx";
 import {isPiece, pieceImg, pieceType} from "@/utils/Tama/pieceImg.ts";
-import {socket} from "@/socket.ts";
+import {socket, startGameParams} from "@/socket.ts";
+import {gameInfoType} from "@/types/game.ts";
 
 export class TamaBoard {
   private readonly ctx: CanvasRenderingContext2D;
@@ -12,6 +13,8 @@ export class TamaBoard {
   private cellSize = 96
   private moveVelocity = 5
   private size = this.gridSize * (this.cellSize + this.lineWidth) + this.lineWidth
+
+  public onGameInfo?: (data: gameInfoType) => void
 
   private stopShaking = () => {
   }
@@ -31,13 +34,10 @@ export class TamaBoard {
     this.canvas.height = this.size
   }
 
-  startGame(room: string, onStart: (room: string) => void) {
-    this.registerEvents()
-    socket.emit('start', room, ({status, room, fen}) => {
-      if (status === 'success') {
-        this.fen = fen
-        this.drawBoard()
-        onStart(room)
+  startGame(data: startGameParams) {
+    socket.emit('start', data, ({status}) => {
+      if (status !== 'success') {
+        console.log('Error with starting game!')
       }
     })
   }
@@ -46,7 +46,13 @@ export class TamaBoard {
     this.unregisterEvents()
   }
 
-  private registerEvents() {
+  registerEvents() {
+    socket.on('start', ({fen, room}) => {
+      this.fen = fen
+      this.drawBoard()
+      this.onGameInfo?.({room})
+    })
+
     socket.on('select', ({piece, select, highlight}) => {
       this.stopShaking()
       this.drawBoard()
@@ -65,6 +71,7 @@ export class TamaBoard {
   }
 
   private unregisterEvents() {
+    socket.off('start')
     socket.off('select');
     socket.off('move')
   }

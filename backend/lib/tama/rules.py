@@ -33,8 +33,7 @@ def is_promoted(side, row):
     return (side == 1 and row == 0) or (side == -1 and row == 7)
 
 
-# TODO: king cannot capture backwards
-# future idea, keeping possible moves while searching capture, if capture detected alter saving moves
+# TODO: future idea, keeping possible moves while searching capture, if capture detected alter saving moves
 @njit()
 def find_capture_for_piece(field, side, row, col, pr_dir):
     if field[row, col] * side == 1:

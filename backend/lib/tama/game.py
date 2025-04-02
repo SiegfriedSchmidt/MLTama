@@ -2,9 +2,15 @@ from socketio import AsyncServer
 from lib.tama.fen import fen_to_field, field_to_fen, piece_to_char, fen_to_side
 from lib.tama.game_mover import GameMover
 
+fens = [
+    '8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w',
+    '8/wwwwwwww/wwwww1ww/8/2b1bWb1/b1bb2bb/bbbbb1b1/8/ w'  # check king capturing backwards
+]
+
 
 class Game:
     def __init__(self, fen: str, room: str, sio: AsyncServer):
+        fen = fen if fen else fens[0]
         self.mover = GameMover(fen_to_field(fen), fen_to_side(fen))
         self.room = room
         self.sio = sio
