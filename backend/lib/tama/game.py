@@ -12,6 +12,7 @@ class Game:
     def __init__(self, fen: str, room: str, sio: AsyncServer):
         fen = fen if fen else fens[0]
         self.mover = GameMover(fen_to_field(fen), fen_to_side(fen))
+        self.player_side = 1
         self.room = room
         self.sio = sio
         self.selected: tuple[int, int] | None = None
@@ -21,6 +22,9 @@ class Game:
         return field_to_fen(self.mover.field, self.mover.side)
 
     def select(self, row: int, col: int) -> tuple[str, tuple[int, int], list[tuple[int, int]]]:
+        if self.player_side != self.mover.side:
+            return '', (0, 0), [(0, 0)]
+
         if self.selected == (row, col):
             return '', (0, 0), [(0, 0)]
 
