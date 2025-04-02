@@ -1,3 +1,7 @@
+# from numba import config
+
+# config.DISABLE_JIT = True
+
 import numpy as np
 from numba import njit
 from lib.tama.rules import get_possible_moves, make_move_with_capture, make_move_without_capture
@@ -88,7 +92,7 @@ find_best_moves(test_field, 1, 2)
 def main():
     field = fen_to_field('8/wwwwwwww/wwwww1ww/8/2b1bWb1/b1bb2bb/bbbbb1b1/8/ w')
     print('start')
-    print(*find_best_moves(field, 1, 3))
+    print(*find_best_moves(field, 1, 9))
 
 
 if __name__ == '__main__':
