@@ -23,6 +23,8 @@ kcd = np.array([[0, -1], [-1, 0], [0, 1], [1, 0]], dtype=np.int8)
 kd = np.array([[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]], dtype=np.int8)
 
 
+# TODO: chanhe side variable to color variable (looks better)
+# TODO: add docs for every function
 @njit()
 def on_board(row, col):
     return 0 <= row < 8 and 0 <= col < 8
