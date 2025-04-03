@@ -3,6 +3,7 @@
 # config.DISABLE_JIT = True
 
 import numpy as np
+import time
 from numba import njit
 from lib.tama.rules import get_possible_moves, make_move_with_capture, make_move_without_capture
 from lib.tama.fen import fen_to_field
@@ -45,6 +46,7 @@ def find_best_moves(field, side, search_depth):
             if evaluated > alpha:
                 alpha = evaluated
                 best_move_idx = i
+
             field = field_copy.copy()
 
     return best_move_idx, stats
