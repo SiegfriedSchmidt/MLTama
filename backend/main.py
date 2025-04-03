@@ -74,20 +74,10 @@ async def start(sid, data):
 @sio.event
 async def click(sid, data):
     room = clients[sid].room
-    if not room:
+    if not room or room not in games:
         return
 
-    game = games[room]
-
-    if game.selected:
-        piece, fen_start, fen_end, move = game.move(*data)
-        if piece:
-            return await sio.emit('move', {'move': move, 'piece': piece, 'fenStart': fen_start, 'fenEnd': fen_end},
-                                  room=room)
-
-    piece, select, highlight = game.select(*data)
-    if piece:
-        return await sio.emit('select', {'select': select, 'piece': piece, 'highlight': highlight}, room=room)
+    await games[room].click(*data)
 
 
 async def makeOpponentMove(data):

@@ -15,7 +15,7 @@ def evaluate_node(field):
 
 
 @njit()
-def find_best_moves(field, side, search_depth):
+def find_best_moves(field, side, depth):
     moves = get_possible_moves(field, side)
     moves_idx, max_capture = moves[0, 0], moves[0, 1]
 
@@ -30,7 +30,7 @@ def find_best_moves(field, side, search_depth):
                 make_move_with_capture(field, moves[j, 2], moves[j, 3], moves[j + 1, 0], moves[j + 1, 1],
                                        moves[j + 1, 2], moves[j + 1, 3], moves[j + 1, 4])
 
-            evaluated = -negamax(stats, field, search_depth - 1, -beta, -alpha, -side)
+            evaluated = -negamax(stats, field, depth - 1, -beta, -alpha, -side)
             print(evaluated, stats)
             if evaluated > alpha:
                 alpha = evaluated
@@ -41,7 +41,7 @@ def find_best_moves(field, side, search_depth):
         for i in range(1, moves_idx):
             make_move_without_capture(field, moves[i, 0], moves[i, 1], moves[i, 2], moves[i, 3], moves[i, 4])
 
-            evaluated = -negamax(stats, field, search_depth - 1, -beta, -alpha, -side)
+            evaluated = -negamax(stats, field, depth - 1, -beta, -alpha, -side)
             print(evaluated, stats)
             if evaluated > alpha:
                 alpha = evaluated

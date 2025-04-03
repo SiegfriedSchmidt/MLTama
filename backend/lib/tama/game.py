@@ -21,37 +21,50 @@ class Game:
     def fen(self) -> str:
         return field_to_fen(self.mover.field, self.mover.side)
 
-    def select(self, row: int, col: int) -> tuple[str, tuple[int, int], list[tuple[int, int]]]:
+    async def click(self, row: int, col: int) -> None:
+        if not await self.move(row, col):
+            await self.select(row, col)
+
+    async def select(self, row: int, col: int) -> None:
         if self.player_side != self.mover.side:
-            return '', (0, 0), [(0, 0)]
+            return
 
         if self.selected == (row, col):
-            return '', (0, 0), [(0, 0)]
+            return
 
         possible = self.mover.get_possible_for_piece(row, col)
         print(possible)
-        if possible:
-            self.selected = row, col
-            return piece_to_char[self.mover.field[*self.selected]], self.selected, possible
-        else:
-            return '', (0, 0), [(0, 0)]
+        if not possible:
+            return
 
-    def move(self, row: int, col: int) -> tuple[str, str, str, tuple[int, int, int, int]]:
+        self.selected = row, col
+        await self.sio.emit(
+            'select',
+            {'select': self.selected, 'piece': piece_to_char[self.mover.field[*self.selected]], 'highlight': possible},
+            room=self.room
+        )
+
+    async def move(self, row: int, col: int) -> bool:
         if not self.selected:
-            return '', '', '', (0, 0, 0, 0)
+            return False
 
         move = self.selected[0], self.selected[1], row, col
-        if self.mover.is_move_possible(*move):
-            piece = self.mover.field[self.selected]
+        if not self.mover.is_move_possible(*move):
+            return False
 
-            self.mover.field[self.selected] = 0
-            start_fen = self.fen
-            self.mover.field[self.selected] = piece
+        piece = self.mover.field[self.selected]
 
-            self.mover.move(*move)
-            end_fen = self.fen
+        self.mover.field[self.selected] = 0
+        start_fen = self.fen
+        self.mover.field[self.selected] = piece
 
-            self.selected = None
-            return piece_to_char[piece], start_fen, end_fen, move
-        else:
-            return '', '', '', (0, 0, 0, 0)
+        self.mover.move(*move)
+        end_fen = self.fen
+
+        self.selected = None
+        await self.sio.emit(
+            'move', {'move': move, 'piece': piece_to_char[piece], 'fenStart': start_fen, 'fenEnd': end_fen},
+            room=self.room
+        )
+
+        return True
