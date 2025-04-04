@@ -2,22 +2,23 @@ from typing import Callable, Awaitable
 
 from lib.fen import fen_to_field, field_to_fen, piece_to_char, fen_to_side
 from lib.game_mover import GameMover
-from lib.player import Player
+from lib.player import HumanPlayer, ComputerPlayer
 from lib.sio_server.types import SelectData, MoveData
 
 fens = [
     '8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w',
     '8/wwwwwwww/wwwww1ww/8/2b1bWb1/b1bb2bb/bbbbb1b1/8/ w',  # check king capturing backwards
-    '8/wwwwwwww/wwwww2w/7w/2b3b1/bb1bbbbb/2bWb3/8/ w' # 1081 sequence
+    '8/wwwwwwww/wwwww2w/7w/2b3b1/bb1bbbbb/2bWb3/8/ w'  # 1081 sequence
 ]
 
 
 class Game:
     def __init__(self, fen: str, emit_select: Callable[[SelectData], Awaitable[None]],
                  emit_move: Callable[[MoveData], Awaitable[None]]):
-        fen = fen if fen else fens[2]
+        fen = fen if fen else fens[0]
         self.mover = GameMover(fen_to_field(fen), fen_to_side(fen))
-        self.players: list[Player] = []
+        self.human_players: dict[str, HumanPlayer] = {}
+        self.computer_players: dict[int, ComputerPlayer] = {-1: ComputerPlayer(-1, 6)}
         self.emit_select = emit_select
         self.emit_move = emit_move
         self.selected: SelectData | None = None
@@ -26,7 +27,19 @@ class Game:
     def fen(self) -> str:
         return field_to_fen(self.mover.field, self.mover.side)
 
-    async def click(self, row: int, col: int) -> None:
+    def add_human_player(self, player: HumanPlayer):
+        self.human_players[player.sid] = player
+
+    def remove_human_player(self, sid: str):
+        del self.human_players[sid]
+
+    def add_computer_player(self, player: ComputerPlayer):
+        self.computer_players[player.side] = player
+
+    async def click(self, sid: str, row: int, col: int) -> None:
+        if sid not in self.human_players or self.human_players[sid].side != self.mover.side:
+            return
+
         if not await self.move(row, col):
             await self.select(row, col)
 
@@ -54,4 +67,10 @@ class Game:
         moves = self.mover.move(*move)
         self.selected = None
         await self.emit_move(moves)
+
+        if self.mover.side in self.computer_players:
+            best_idx, stats = await self.computer_players[self.mover.side].get_best_move(self.mover.field)
+            print('stats: ', stats)
+            await self.emit_move(self.mover.move_by_idx(best_idx))
+
         return True

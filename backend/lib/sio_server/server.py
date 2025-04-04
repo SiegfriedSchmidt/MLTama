@@ -1,6 +1,7 @@
 import socketio
 from lib.client_data import ClientData
 from lib.game import Game
+from lib.player import HumanPlayer
 from lib.sio_server.types import *
 from lib.utils.uuid import uuid
 
@@ -54,10 +55,12 @@ async def connect_to_room(sid: str, room: str, fen: str) -> None:
         # existing room
         print(f'enter existing room {room}')
         game = games[room]
+        game.add_human_player(HumanPlayer(1, sid))
     else:
         # new room
         print(f'create new room {room}')
         game = await create_game(fen, room)
+        game.add_human_player(HumanPlayer(1, sid))
         games[room] = game
 
     await server_start({'room': room, 'fen': game.fen}, to=sid)
@@ -69,13 +72,18 @@ async def start(sid, data: ClientStartData) -> ClientStartCallback:
         # already have room
         room = clients[sid].room
         if data['restart']:
+            # restart game
             print(f'restart game in room {room}')
+            players = games[room].human_players.values()
             del games[room]
             game = await create_game(data['fen'], room)
+            for player in players:
+                game.add_human_player(player)
             games[room] = game
             await sio.emit('start', {'room': room, 'fen': game.fen}, room=room)
         else:
             # want to join to other room
+            games[room].remove_human_player(sid)
             await sio.leave_room(sid, room)
             await connect_to_room(sid, data['room'], data['fen'])
 
@@ -94,4 +102,4 @@ async def click(sid, data: tuple[int, int]) -> None:
     if not room or room not in games:
         return
 
-    await games[room].click(*data)
+    await games[room].click(sid, *data)

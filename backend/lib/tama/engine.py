@@ -15,7 +15,9 @@ def evaluate_node(field):
 
 
 @njit()
-def find_best_moves(field, side, depth):
+def find_best_moves(field_copy, side, depth):
+    print(1)
+    field = field_copy.copy()
     moves = get_possible_moves(field, side)
     moves_idx, max_capture = moves[0, 0], moves[0, 1]
 
@@ -23,7 +25,6 @@ def find_best_moves(field, side, depth):
     alpha = -999999
     beta = -alpha
     stats = np.array([0, 0], dtype=np.int64)
-    field_copy = field.copy()
     if max_capture:
         for i in range(1, moves_idx, max_capture + 1):
             for j in range(i, i + max_capture):
@@ -53,16 +54,16 @@ def find_best_moves(field, side, depth):
 
 
 @njit()
-def negamax(stats, field, depth, alpha, beta, side):
+def negamax(stats, field_copy, depth, alpha, beta, side):
     if depth == 0:
         stats[0] += 1
-        return evaluate_node(field) * side
+        return evaluate_node(field_copy) * side
 
+    field = field_copy.copy()
     moves = get_possible_moves(field, side)
     moves_idx, max_capture = moves[0, 0], moves[0, 1]
     stats[1] = max(stats[1], moves_idx)
 
-    field_copy = field.copy()
     if max_capture:
         for i in range(1, moves_idx, max_capture + 1):
             for j in range(i, i + max_capture):

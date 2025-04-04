@@ -83,6 +83,11 @@ class GameMover:
 
         return moves
 
+    def move_by_idx(self, move_idx: int):
+        moves = self.raw_move(move_idx, self.moves[0, 1])
+        self.__end_move()
+        return moves
+
     def move(self, from_row, from_col, to_row, to_col):
         move_idx = self.readable_moves[from_row, from_col][to_row, to_col][0]
         if self.cur_capture < self.moves[0, 1]:
