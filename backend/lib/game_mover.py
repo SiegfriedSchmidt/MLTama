@@ -1,5 +1,7 @@
 import numpy as np
 
+from lib.fen import field_to_fen, piece_to_char
+from lib.sio_server.types import MoveData
 from lib.tama.rules import make_move_with_capture, make_move_without_capture, get_possible_moves
 
 
@@ -21,9 +23,12 @@ class GameMover:
         self.__fill_readable_moves([])
         self.cur_capture = 0
 
+    def __get_move_from_idx(self, i):
+        return map(int, [*self.moves[i, 2:4], *self.moves[i + 1, 2:4]]) if self.moves[0, 1] else map(int, [
+            *self.moves[i, 0:4]])
+
     def __add_index_to_possible(self, i):
-        row, col, row2, col2 = map(int, [*self.moves[i, 2:4], *self.moves[i + 1, 2:4]]) if self.moves[0, 1] else \
-            map(int, [*self.moves[i, 0:4]])
+        row, col, row2, col2 = self.__get_move_from_idx(i)
 
         if (row, col) not in self.readable_moves:
             self.readable_moves[row, col] = {}
@@ -52,18 +57,46 @@ class GameMover:
         self.__fill_readable_moves([])
         self.cur_capture = 0
 
+    def __create_move_data(self, i: int, capture: bool) -> MoveData:
+        row, col, row2, col2 = self.__get_move_from_idx(i)
+        piece = self.field[row, col]
+
+        self.field[row, col] = 0
+        fen_start = field_to_fen(self.field, self.side)
+        self.field[row, col] = piece
+
+        if capture:
+            make_move_with_capture(self.field, *self.moves[i, 2:4], *self.moves[i + 1])
+        else:
+            make_move_without_capture(self.field, *self.moves[i])
+
+        fen_end = field_to_fen(self.field, self.side)
+        return {'piece': piece_to_char[piece], 'move': (row, col, row2, col2), 'fenStart': fen_start, 'fenEnd': fen_end}
+
+    def raw_move(self, move_idx: int, capture_len: int) -> list[MoveData]:
+        moves: list[MoveData] = []
+        if capture_len:
+            for i in range(move_idx, move_idx + capture_len):
+                moves.append(self.__create_move_data(i, True))
+        else:
+            moves.append(self.__create_move_data(move_idx, False))
+
+        return moves
+
     def move(self, from_row, from_col, to_row, to_col):
         move_idx = self.readable_moves[from_row, from_col][to_row, to_col][0]
         if self.cur_capture < self.moves[0, 1]:
-            make_move_with_capture(self.field, *self.moves[move_idx, 2:4], *self.moves[move_idx + 1])
+            move = self.raw_move(move_idx, 1)
 
-            self.__fill_readable_moves(self.readable_moves[from_row, from_col][to_row, to_col])
             self.cur_capture += 1
             if self.cur_capture == self.moves[0, 1]:
                 self.__end_move()
+            else:
+                self.__fill_readable_moves(self.readable_moves[from_row, from_col][to_row, to_col])
         else:
-            make_move_without_capture(self.field, *self.moves[move_idx])
+            move = self.raw_move(move_idx, 0)
             self.__end_move()
+        return move
 
     def get_possible_for_piece(self, from_row, from_col):
         if (from_row, from_col) not in self.readable_moves:

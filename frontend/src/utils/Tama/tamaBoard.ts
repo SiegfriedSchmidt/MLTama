@@ -1,8 +1,8 @@
 import {isCharNumber} from "@/utils/helpers.ts";
 import {boardColor} from "@/styles/GlobalStyles.tsx";
 import {isPiece, pieceImg, pieceType} from "@/utils/Tama/pieceImg.ts";
-import {socket, startGameParams} from "@/socket.ts";
-import {gameInfoType} from "@/types/game.ts";
+import {socket} from "@/socket.ts";
+import {gameInfoType, startGameParams} from "@/types/game.ts";
 
 export class TamaBoard {
   private readonly ctx: CanvasRenderingContext2D;
@@ -60,13 +60,15 @@ export class TamaBoard {
       this.startShaking(piece, ...select)
     })
 
-    socket.on('move', async ({piece, move, fenStart, fenEnd}) => {
+    socket.on('move', async (moves) => {
       this.stopShaking()
-      this.fen = fenStart
-      await this.move(piece, ...move)
-      this.fen = fenEnd
+      for (const {piece, move, fenEnd, fenStart} of moves) {
+        this.fen = fenStart
+        await this.move(piece, ...move)
+        this.fen = fenEnd
+        this.drawBoard()
+      }
       console.log(this.fen)
-      this.drawBoard()
     })
   }
 

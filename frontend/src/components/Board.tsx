@@ -1,8 +1,6 @@
 import React, {MouseEvent, FC, useEffect, useRef, Ref, useImperativeHandle} from 'react';
 import {TamaBoard} from "@/utils/Tama/tamaBoard.ts";
-import {Box} from "@chakra-ui/react";
-import {gameInfoType} from "@/types/game.ts";
-import {startGameParams} from "@/socket.ts";
+import {gameInfoType, startGameParams} from "@/types/game.ts";
 
 interface Props {
   ref: Ref<(data: startGameParams) => void>

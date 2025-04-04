@@ -1,8 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Text, Flex, Box, Button} from "@chakra-ui/react";
 import Board from "@/components/Board.tsx";
-import {gameInfoType} from "@/types/game.ts";
-import {startGameParams} from "@/socket.ts";
+import {gameInfoType, startGameParams} from "@/types/game.ts";
 
 const HomePage = () => {
   const [gameInfo, setGameInfo] = useState<gameInfoType>()
