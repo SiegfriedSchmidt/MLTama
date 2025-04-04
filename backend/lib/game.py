@@ -67,10 +67,13 @@ class Game:
         moves = self.mover.move(*move)
         self.selected = None
         await self.emit_move(moves)
+        await self.computer_move()
 
+        return True
+
+    async def computer_move(self):
         if self.mover.side in self.computer_players:
             best_idx, stats = await self.computer_players[self.mover.side].get_best_move(self.mover.field)
             print('stats: ', stats)
             await self.emit_move(self.mover.move_by_idx(best_idx))
-
-        return True
+            await self.computer_move()

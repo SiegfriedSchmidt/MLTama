@@ -1,4 +1,4 @@
-from lib.tama.engine import find_best_moves
+from lib.tama.engines.engine1 import find_best_moves
 import multiprocessing
 import asyncio
 
@@ -18,34 +18,35 @@ class ComputerPlayer(Player):
     def __init__(self, side: int, depth: int):
         super().__init__(side)
         self.depth = depth
-        self._queue = multiprocessing.Queue()
-        self._process: multiprocessing.Process | None = None
-
-    async def get_best_move(self, field):
-        if self._process and self._process.is_alive():
-            self._process.terminate()  # Kill previous if still running
-
-        self._process = multiprocessing.Process(
-            target=self._get_best_move_worker,
-            args=(field, self.side, self.depth, self._queue),
+        self._task_queue = multiprocessing.Queue()
+        self._result_queue = multiprocessing.Queue()
+        self._worker = multiprocessing.Process(
+            target=self._worker_loop,
+            args=(self._task_queue, self._result_queue),
             daemon=True
         )
-        self._process.start()
-        return await self._poll_queue_for_result()
+        self._worker.start()
+
+    async def get_best_move(self, field):
+        """Send task to worker and await result."""
+        self._task_queue.put((field, self.side, self.depth))
+        return await self._poll_result()
 
     @staticmethod
-    def _get_best_move_worker(field, side, depth, queue):
-        best_idx, stats = find_best_moves(field, side, depth)
-        queue.put((best_idx, stats))
-
-    async def _poll_queue_for_result(self) -> str:
-        """Check the queue periodically without blocking the event loop."""
+    def _worker_loop(task_queue, result_queue):
+        """Run indefinitely, processing tasks as they come."""
         while True:
-            if not self._queue.empty():
-                return self._queue.get()  # Return the result
-            await asyncio.sleep(0.2)  # Yield control to the event loop
+            field, side, depth = task_queue.get()
+            result = find_best_moves(field, side, depth)
+            result_queue.put(result)
+
+    async def _poll_result(self):
+        """Check for results without blocking the event loop."""
+        while True:
+            if not self._result_queue.empty():
+                return self._result_queue.get()
+            await asyncio.sleep(0.2)  # Prevent busy-waiting
 
     def shutdown(self):
-        """Cleanup resources (call when exiting)."""
-        if self._process:
-            self._process.terminate()
+        if self._worker.is_alive():
+            self._worker.terminate()

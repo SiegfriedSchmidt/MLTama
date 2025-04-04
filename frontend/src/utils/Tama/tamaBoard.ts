@@ -19,6 +19,7 @@ export class TamaBoard {
   private stopShaking = () => {
   }
   private moving = false;
+  private moveQueue: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -62,13 +63,18 @@ export class TamaBoard {
 
     socket.on('move', async (moves) => {
       this.stopShaking()
-      for (const {piece, move, fenEnd, fenStart} of moves) {
-        this.fen = fenStart
-        await this.move(piece, ...move)
-        this.fen = fenEnd
-        this.drawBoard()
+      if (!this.moveQueue) {
+        this.moveQueue = Promise.resolve();
       }
-      console.log(this.fen)
+      this.moveQueue = this.moveQueue.then(async () => {
+        for (const {piece, move, fenEnd, fenStart} of moves) {
+          this.fen = fenStart;
+          await this.move(piece, ...move);  // Wait for move to finish
+          this.fen = fenEnd;
+          this.drawBoard();
+          console.log(this.fen)
+        }
+      })
     })
   }
 
@@ -226,8 +232,8 @@ export class TamaBoard {
         this.ctx.drawImage(pieceImg[piece], x + this.imagePad, y + this.imagePad, this.cellSize - this.imagePad * 2, this.cellSize - this.imagePad * 2)
 
         if (x == toX && y == toY) {
-          resolve()
           this.moving = false
+          resolve()
         } else {
           requestAnimationFrame((time) => startT ? move(startT, time) : move(time, time))
         }

@@ -14,9 +14,15 @@ def evaluate_node(field):
     return np.sum(field)
 
 
+def find_best_moves(field, side, think_time: int):
+    stats = np.array([0, 0], dtype=np.int64)
+    moves = []
+    for depth in range(1, 50):
+        moves.append(find_best_moves_depth(stats, field, side, depth))
+
+
 @njit()
-def find_best_moves(field_copy, side, depth):
-    print(1)
+def find_best_moves_depth(stats, field_copy, side, depth):
     field = field_copy.copy()
     moves = get_possible_moves(field, side)
     moves_idx, max_capture = moves[0, 0], moves[0, 1]
@@ -24,7 +30,6 @@ def find_best_moves(field_copy, side, depth):
     best_move_idx = 0
     alpha = -999999
     beta = -alpha
-    stats = np.array([0, 0], dtype=np.int64)
     if max_capture:
         for i in range(1, moves_idx, max_capture + 1):
             for j in range(i, i + max_capture):
@@ -32,10 +37,8 @@ def find_best_moves(field_copy, side, depth):
                                        moves[j + 1, 2], moves[j + 1, 3], moves[j + 1, 4])
 
             evaluated = -negamax(stats, field, depth - 1, -beta, -alpha, -side)
-            print(evaluated, stats)
-            if evaluated > alpha:
-                alpha = evaluated
-                best_move_idx = i
+            alpha = max(alpha, evaluated)
+            yield i, evaluated
 
             field = field_copy.copy()
     else:
@@ -43,10 +46,8 @@ def find_best_moves(field_copy, side, depth):
             make_move_without_capture(field, moves[i, 0], moves[i, 1], moves[i, 2], moves[i, 3], moves[i, 4])
 
             evaluated = -negamax(stats, field, depth - 1, -beta, -alpha, -side)
-            print(evaluated, stats)
-            if evaluated > alpha:
-                alpha = evaluated
-                best_move_idx = i
+            alpha = max(alpha, evaluated)
+            yield i, evaluated
 
             field = field_copy.copy()
 
