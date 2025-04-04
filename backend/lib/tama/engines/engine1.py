@@ -15,10 +15,22 @@ def evaluate_node(field):
 
 
 def find_best_moves(field, side, think_time: int):
+    # iterative descent
     stats = np.array([0, 0], dtype=np.int64)
-    moves = []
-    for depth in range(1, 50):
-        moves.append(find_best_moves_depth(stats, field, side, depth))
+    for depth in range(1, 9):
+        moves = []
+        best_val = -999999
+        for move_idx, evaluated in find_best_moves_depth(stats, field, side, depth):
+            if evaluated < best_val:
+                continue
+
+            if evaluated > best_val:
+                best_val = evaluated
+                moves.clear()
+
+            moves.append((move_idx, evaluated))
+
+        print(depth, moves[0], len(moves), stats)
 
 
 @njit()
@@ -95,18 +107,20 @@ find_best_moves(test_field, 1, 2)
 
 
 def main():
-    field = fen_to_field('8/wwwwwwww/wwwww2w/7w/2b3b1/bb1bbbbb/2bWb3/8/ w')
+    field = fen_to_field('8/wwwwwwww/wwwww1ww/8/2b1bWb1/b1bb2bb/bbbbb1b1/8/ w')
     possible = get_possible_moves(field, 1)
     print(possible[0])
 
-    field = fen_to_field('8/wwwwwwww/wwwww1ww/8/2b1bWb1/b1bb2bb/bbbbb1b1/8/ w')
+    field = fen_to_field('8/wwwwwwww/wwwww2w/7w/2b3b1/bb1bbbbb/2bWb3/8/ w')
     print('start')
     print(evaluate_node(field))
     t = time()
-    print(*find_best_moves(field, 1, 10))
+    find_best_moves(field, 1, 10)
     print(f"time: {time() - t:.2f}")
 
 
+if __name__ == '__main__':
+    main()
 '''
 '8/wwwwwwww/wwwww1ww/8/2b1bWb1/b1bb2bb/bbbbb1b1/8/ w'
 moves = np.zeros((1500, 5), dtype=np.uint32)
@@ -203,6 +217,3 @@ time: 39.16
 
 
 '''
-
-if __name__ == '__main__':
-    main()
