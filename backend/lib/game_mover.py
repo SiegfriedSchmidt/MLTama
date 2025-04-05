@@ -77,7 +77,7 @@ class GameMover:
         moves: list[MoveData] = []
         if capture_len:
             for i in range(move_idx, move_idx + capture_len):
-                moves.append(self.__create_move_data(i, True, is_side_changes))
+                moves.append(self.__create_move_data(i, True, is_side_changes and i == move_idx + capture_len - 1))
         else:
             moves.append(self.__create_move_data(move_idx, False, True))
 

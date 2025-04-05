@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Awaitable, Any
 from lib.tama.engines.engine1 import evaluate_node_at_depth
 import multiprocessing
 import asyncio
@@ -30,7 +30,7 @@ class ComputerPlayer(Player):
         )
         self._worker.start()
 
-    async def get_best_move(self, field, callback: Callable):
+    async def get_best_move(self, field, callback: Callable[[Any], Awaitable]):
         """Send task to worker and await result."""
         self._task_queue.put((field, self.side, self.think_time))
         return await self._poll_result(callback)
@@ -47,13 +47,13 @@ class ComputerPlayer(Player):
             result = iterative_descent(evaluate_node_at_depth, field, side, think_time, callback)
             result_queue.put(('result', result))
 
-    async def _poll_result(self, callback: Callable):
+    async def _poll_result(self, callback: Callable[[Any], Awaitable]):
         """Check for results without blocking the event loop."""
         while True:
             if not self._result_queue.empty():
                 kind, val = self._result_queue.get()
                 if kind == 'callback':
-                    callback(val)
+                    await callback(val)
                 elif kind == 'result':
                     return val
 

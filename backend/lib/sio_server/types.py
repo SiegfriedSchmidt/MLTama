@@ -34,6 +34,10 @@ class MoveData(TypedDict):
     fenEnd: str
 
 
+class InfoData(TypedDict):
+    depth: int
+
+
 class ServerStartData(TypedDict):
     room: str
     fen: str

@@ -2,21 +2,17 @@ import {socket} from "../socket.ts";
 import {useEffect, useState} from "react";
 
 export default function useSocket() {
-  const [opponentMove, setOpponentMove] = useState<{ move: string, fen: string }>();
-
-  function clientMakeMove(move: string, callback: (data: { status: string, content: string }) => void) {
-    socket.emit('clientMove', {move}, callback)
-  }
+  const [info, setInfo] = useState<{ depth: number }>({depth: 0});
 
   useEffect(() => {
-    socket.on('opponentMove', (data) => {
-      setOpponentMove(data);
+    socket.on('info', (data) => {
+      setInfo(data);
     });
 
     return () => {
-      socket.off('opponentMove');
+      socket.off('info');
     };
   }, []);
 
-  return {clientMakeMove, opponentMove}
+  return {info}
 }
