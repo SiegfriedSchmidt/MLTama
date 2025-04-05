@@ -24,10 +24,20 @@ for i in range(8):
 @njit()
 def evaluate_node(field):
     value = 0
+    white_count = 0
+    black_count = 0
     for i in range(8):
         for j in range(8):
+            if field[i, j] > 0:
+                white_count += 1
+            elif field[i, j] < 0:
+                black_count += 1
             value += pieces_eval_arrays[field[i, j], i, j]
 
+    if white_count == 0:
+        return -9999
+    elif black_count == 0:
+        return 9999
     return value
 
 

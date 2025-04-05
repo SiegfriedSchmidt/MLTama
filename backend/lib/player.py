@@ -62,7 +62,7 @@ class ComputerPlayer(Player):
                 elif kind == 'result':
                     return val
 
-            await asyncio.sleep(0.2)  # Prevent busy-waiting
+            await asyncio.sleep(0.05)  # Prevent busy-waiting
 
     def shutdown(self):
         if self._worker.is_alive():
