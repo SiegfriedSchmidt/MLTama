@@ -198,7 +198,7 @@ def get_possible_moves(field: np.ndarray, side: int):
     # other elements are elements of sequence itself size of capture_depth:
     # (captured_row, captured_col, new_row, new_col, promoted)
 
-    moves = np.empty((1500, 5), dtype=np.int32)  # TODO: change to empty and measure performance
+    moves = np.empty((10000, 5), dtype=np.int32)
     moves[0] = 0, 0, 0, 0, 0
 
     max_capture = find_field_capture_max_depth(field, side)

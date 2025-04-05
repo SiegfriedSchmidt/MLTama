@@ -6,7 +6,8 @@ import numpy as np
 from time import time
 from numba import njit
 from lib.tama.rules import get_possible_moves, make_move_with_capture, make_move_without_capture
-from lib.fen import fen_to_field, field_to_fen
+from lib.fen import fen_to_field
+from lib.tama.helpers import field_to_fen_numba
 
 
 @njit()
@@ -14,56 +15,27 @@ def evaluate_node(field):
     return np.sum(field)
 
 
-def find_best_moves(field, side, think_time: int):
-    # iterative descent
-    stats = np.array([0, 0], dtype=np.int64)
-    for depth in range(1, 9):
-        moves = []
-        best_val = -999999
-        for move_idx, evaluated in find_best_moves_depth(stats, field, side, depth):
-            if evaluated < best_val:
-                continue
-
-            if evaluated > best_val:
-                best_val = evaluated
-                moves.clear()
-
-            moves.append((move_idx, evaluated))
-
-        print(depth, moves[0], len(moves), stats)
-
-
 @njit()
-def find_best_moves_depth(stats, field_copy, side, depth):
+def evaluate_node_at_depth(stats, moves, field_copy, side, depth):
     field = field_copy.copy()
-    moves = get_possible_moves(field, side)
     moves_idx, max_capture = moves[0, 0], moves[0, 1]
 
-    best_move_idx = 0
     alpha = -999999
-    beta = -alpha
+    beta = 999999
     if max_capture:
         for i in range(1, moves_idx, max_capture + 1):
             for j in range(i, i + max_capture):
                 make_move_with_capture(field, moves[j, 2], moves[j, 3], moves[j + 1, 0], moves[j + 1, 1],
                                        moves[j + 1, 2], moves[j + 1, 3], moves[j + 1, 4])
 
-            evaluated = -negamax(stats, field, depth - 1, -beta, -alpha, -side)
-            alpha = max(alpha, evaluated)
-            yield i, evaluated
-
+            yield -negamax(stats, field, depth - 1, -beta, -alpha, -side)
             field = field_copy.copy()
     else:
         for i in range(1, moves_idx):
             make_move_without_capture(field, moves[i, 0], moves[i, 1], moves[i, 2], moves[i, 3], moves[i, 4])
 
-            evaluated = -negamax(stats, field, depth - 1, -beta, -alpha, -side)
-            alpha = max(alpha, evaluated)
-            yield i, evaluated
-
+            yield -negamax(stats, field, depth - 1, -beta, -alpha, -side)
             field = field_copy.copy()
-
-    return best_move_idx, stats
 
 
 @njit()
@@ -72,50 +44,62 @@ def negamax(stats, field_copy, depth, alpha, beta, side):
         stats[0] += 1
         return evaluate_node(field_copy) * side
 
-    field = field_copy.copy()
-    moves = get_possible_moves(field, side)
+    moves = get_possible_moves(field_copy, side)
     moves_idx, max_capture = moves[0, 0], moves[0, 1]
+
+    # is terminal node
+    if moves_idx == 1:
+        return 9999 * side
+
+    field = field_copy.copy()
     stats[1] = max(stats[1], moves_idx)
 
+    value = -999999
     if max_capture:
         for i in range(1, moves_idx, max_capture + 1):
             for j in range(i, i + max_capture):
                 make_move_with_capture(field, moves[j, 2], moves[j, 3], moves[j + 1, 0], moves[j + 1, 1],
                                        moves[j + 1, 2], moves[j + 1, 3], moves[j + 1, 4])
 
-            alpha = max(alpha, -negamax(stats, field, depth - 1, -beta, -alpha, -side))
+            value = max(value, -negamax(stats, field, depth - 1, -beta, -alpha, -side))
+            alpha = max(alpha, value)
             if alpha >= beta:
-                return alpha
+                break
 
             field = field_copy.copy()
     else:
         for i in range(1, moves_idx):
             make_move_without_capture(field, moves[i, 0], moves[i, 1], moves[i, 2], moves[i, 3], moves[i, 4])
 
-            alpha = max(alpha, -negamax(stats, field, depth - 1, -beta, -alpha, -side))
+            value = max(value, -negamax(stats, field, depth - 1, -beta, -alpha, -side))
+            alpha = max(alpha, value)
             if alpha >= beta:
-                return alpha
+                break
 
             field = field_copy.copy()
 
-    return alpha
+    return value
 
 
 # compile
 test_field = fen_to_field('8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w')
-find_best_moves(test_field, 1, 2)
+test_moves = get_possible_moves(test_field, 1)
+test_stats = np.array([0, 0], dtype=np.int64)
+evaluate_node_at_depth(test_stats, test_moves, test_field, 1, 2)
 
 
 def main():
-    field = fen_to_field('8/wwwwwwww/wwwww1ww/8/2b1bWb1/b1bb2bb/bbbbb1b1/8/ w')
-    possible = get_possible_moves(field, 1)
+    from lib.tama.iterative_descent import iterative_descent
+    field = fen_to_field('b4B2/2W5/8/3w1w2/8/8/w2w1w1w/1W2w1w1/ b')
+    possible = get_possible_moves(field, -1)
     print(possible[0])
 
-    field = fen_to_field('8/wwwwwwww/wwwww2w/7w/2b3b1/bb1bbbbb/2bWb3/8/ w')
+    field = fen_to_field('w1w1w1w1/1w1w1w1w/8/3b1b2/2w1w1w1/1b1b1b1b/b1b1b1b1/1b1b1b1b b')
+    print(field)
     print('start')
     print(evaluate_node(field))
     t = time()
-    find_best_moves(field, 1, 10)
+    iterative_descent(evaluate_node_at_depth, field, 1, 8)
     print(f"time: {time() - t:.2f}")
 
 
@@ -215,5 +199,19 @@ time: 36.87
 1 [29832695        0]
 time: 39.16
 
+
+-----------------------------------
+1 [38  0] 4.172325134277344e-05 [(1, -3), (2, -3), (3, -3), (4, -3), (5, -3), (6, -3), (7, -3), (8, -3), (9, -3), (10, -3), (11, -3), (12, -3), (13, -3), (14, -3), (15, -3), (16, -3), (17, -3), (18, -3), (19, -3), (20, -3), (21, -3), (22, -3), (23, -3), (24, -3), (25, -3), (26, -3), (27, -3), (28, -3), (29, -3), (30, -3), (31, -3), (32, -3), (33, -3), (34, -3), (35, -3), (36, -3), (37, -3), (38, -3)]
+2 [120  46] 0.0003871917724609375 [(3, -3), (4, -3), (6, -3), (7, -3), (10, -3), (11, -3), (12, -3), (13, -3), (14, -3), (15, -3), (16, -3), (18, -3), (19, -3), (20, -3), (21, -3), (23, -3), (24, -3), (25, -3), (26, -3), (27, -3), (28, -3), (29, -3), (30, -3), (31, -3), (32, -3), (33, -3), (34, -3), (35, -3), (36, -3), (37, -3), (38, -3), (1, -4), (2, -4), (5, -4), (8, -4), (9, -4), (17, -4), (22, -4)]
+3 [1582   46] 0.0017979145050048828 [(3, -3), (4, -3), (5, -3), (6, -3), (7, -3), (8, -3), (9, -3), (10, -3), (11, -3), (12, -3), (13, -3), (14, -3), (15, -3), (16, -3), (17, -3), (18, -3), (19, -3), (20, -3), (21, -3), (22, -3), (23, -3), (24, -3), (25, -3), (26, -3), (27, -3), (28, -3), (29, -3), (30, -3), (31, -3), (32, -3), (33, -3), (34, -3), (35, -3), (36, -3), (37, -3), (38, -3), (1, -4), (2, -4)]
+4 [39516    51] 0.04971599578857422 [(1, -4), (2, -4), (3, -4), (4, -4), (5, -4), (6, -4), (7, -4), (8, -4), (9, -4), (10, -4), (11, -4), (12, -4), (13, -4), (14, -4), (15, -4), (16, -4), (17, -4), (18, -4), (19, -4), (20, -4), (21, -4), (22, -4), (23, -4), (24, -4), (25, -4), (26, -4), (27, -4), (28, -4), (29, -4), (30, -4), (31, -4), (32, -4), (33, -4), (34, -4), (35, -4), (36, -4), (37, -4), (38, -4)]
+5 [118779   1863] 0.22851157188415527 [(10, -3), (11, -3), (12, -3), (13, -3), (14, -3), (15, -3), (16, -3), (17, -3), (18, -3), (19, -3), (20, -3), (21, -3), (22, -3), (23, -3), (24, -3), (25, -3), (26, -3), (27, -3), (28, -3), (29, -3), (30, -3), (31, -3), (32, -3), (33, -3), (34, -3), (35, -3), (36, -3), (37, -3), (38, -3), (1, -4), (2, -4), (3, -4), (4, -4), (5, -4), (6, -4), (7, -4), (8, -4), (9, -4)]
+6 [1943120    1863] 2.670663595199585 [(34, -3), (35, -3), (36, -3), (37, -3), (38, -3), (10, -4), (11, -4), (12, -4), (13, -4), (14, -4), (15, -4), (16, -4), (17, -4), (18, -4), (19, -4), (20, -4), (21, -4), (22, -4), (23, -4), (24, -4), (25, -4), (26, -4), (27, -4), (28, -4), (29, -4), (30, -4), (31, -4), (32, -4), (33, -4), (1, -5), (2, -5), (3, -5), (4, -5), (5, -5), (6, -5), (7, -5), (8, -5), (9, -5)]
+7 [6041648    2339] 10.728743314743042 [(10, -3), (11, -3), (12, -3), (13, -3), (14, -3), (15, -3), (16, -3), (17, -3), (18, -3), (19, -3), (20, -3), (21, -3), (22, -3), (23, -3), (24, -3), (25, -3), (26, -3), (27, -3), (28, -3), (29, -3), (30, -3), (31, -3), (32, -3), (33, -3), (34, -3), (35, -3), (36, -3), (37, -3), (38, -3), (1, -4), (2, -4), (3, -4), (4, -4), (5, -4), (6, -4), (7, -4), (8, -4), (9, -4)]
+
+[13 16 14 15 11 12 10 25 24 23 22 21 20 19 18 17 29 26 27 28 31 30 32 33
+ 36 35 38 37 34  2  9  1  5  8  3  4  7  6]
+[-3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3 -3
+ -3 -3 -3 -3 -3 -4 -4 -4 -4 -4 -9 -9 -9 -9]
 
 '''

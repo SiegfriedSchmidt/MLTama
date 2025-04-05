@@ -1,6 +1,8 @@
-from lib.tama.engines.engine1 import find_best_moves
+from lib.tama.engines.engine1 import evaluate_node_at_depth
 import multiprocessing
 import asyncio
+
+from lib.tama.iterative_descent import iterative_descent
 
 
 class Player:
@@ -37,7 +39,7 @@ class ComputerPlayer(Player):
         """Run indefinitely, processing tasks as they come."""
         while True:
             field, side, depth = task_queue.get()
-            result = find_best_moves(field, side, depth)
+            result = iterative_descent(evaluate_node_at_depth, field, side, depth)
             result_queue.put(result)
 
     async def _poll_result(self):
