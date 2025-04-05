@@ -18,8 +18,8 @@ const GameInfo: FC<Props> = ({info}) => {
           <DataList.ItemValue>{info?.value}</DataList.ItemValue>
           {info?.victoryIn ?
             <>
-              <DataList.ItemLabel>Depth</DataList.ItemLabel>
-              <DataList.ItemValue>{info.victoryIn}</DataList.ItemValue>
+              <DataList.ItemLabel>Victory in</DataList.ItemLabel>
+              <DataList.ItemValue>{info.victoryIn} moves</DataList.ItemValue>
             </>
             : <></>}
         </DataList.Item>
