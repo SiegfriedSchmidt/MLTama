@@ -62,3 +62,6 @@ class ComputerPlayer(Player):
     def shutdown(self):
         if self._worker.is_alive():
             self._worker.terminate()
+
+    def __del__(self):
+        self.shutdown()
