@@ -35,7 +35,10 @@ class MoveData(TypedDict):
 
 
 class InfoData(TypedDict):
+    side: int
     depth: int
+    value: int
+    victoryIn: int
 
 
 class WinData(TypedDict):

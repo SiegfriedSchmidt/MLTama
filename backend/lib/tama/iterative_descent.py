@@ -1,7 +1,8 @@
-import multiprocessing
 from time import time
 from typing import Iterator, Callable
 import numpy as np
+
+from lib.sio_server.types import InfoData
 from lib.tama.rules import get_possible_moves
 
 
@@ -13,7 +14,7 @@ def is_one_move_possible(field, side):
 
 def iterative_descent(
         evaluate_node_at_depth: Callable[[np.ndarray, np.ndarray, int, int], Iterator[tuple[int, int, bool]]],
-        field: np.ndarray, side: int, think_time: int, callback: Callable
+        field: np.ndarray, side: int, think_time: int, callback: Callable[[InfoData], None]
 ):
     print('Start iterative descent')
     one_move = is_one_move_possible(field, side)
@@ -35,8 +36,12 @@ def iterative_descent(
             if evaluated > depth_best_value:
                 depth_best_value = evaluated
                 depth_best_idx = move_idx
-                if depth_best_value == 9999:
-                    print(f'GUARANTIED WIN {"WHITE" if side == 1 else "BLACK"}')
+                if depth_best_value > 9000:
+                    victory_in_moves = depth - (depth_best_value + 10000)
+                    print(f'GUARANTIED VICTORY {"WHITE" if side == 1 else "BLACK"} IN {victory_in_moves}')
+                    callback(
+                        {'side': side, 'depth': depth - 1, 'value': depth_best_value, 'victoryIn': victory_in_moves}
+                    )
                     return depth_best_idx
 
             print('.', end='')
@@ -48,7 +53,7 @@ def iterative_descent(
                 return best_idx
 
         best_idx = depth_best_idx
-        callback(depth)
+        callback({'side': side, 'depth': depth, 'value': depth_best_value, 'victoryIn': 0})
         print(
             f'\n{depth=}, best_val: {depth_best_value}, best_idx: {best_idx}, leaves: {stats[0]}, max seq: {stats[1]}'
         )

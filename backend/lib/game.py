@@ -79,7 +79,7 @@ class Game:
         await self.emit_move(moves)
 
         if winner:
-            await self.emit_win(winner)
+            await self.emit_win({'winner': winner})
             return True
 
         await self.computer_move()
@@ -88,7 +88,7 @@ class Game:
 
     async def computer_move(self):
         async def callback(val):
-            await self.emit_info({'depth': val})
+            await self.emit_info(val)
 
         if self.mover.side in self.computer_players:
             best_idx = await self.computer_players[self.mover.side].get_best_move(self.mover.field, callback)
@@ -96,6 +96,6 @@ class Game:
             await self.emit_move(moves)
 
             if winner:
-                return await self.emit_win(winner)
+                return await self.emit_win({'winner': winner})
 
             await self.computer_move()
