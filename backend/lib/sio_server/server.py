@@ -27,6 +27,10 @@ async def server_info(data: InfoData, room: str):
     await sio.emit('info', data, room=room)
 
 
+async def server_win(data: WinData, room: str):
+    await sio.emit('win', data, room=room)
+
+
 async def server_start(data: ServerStartData, to: str):
     await sio.emit('start', data, to=to)
 
@@ -49,7 +53,7 @@ async def disconnect(sid) -> None:
 
 async def create_game(fen, room):
     return Game(fen, lambda data: server_select(data, room), lambda data: server_move(data, room),
-                lambda data: server_info(data, room))
+                lambda data: server_info(data, room), lambda data: server_win(data, room))
 
 
 async def connect_to_room(sid: str, room: str, fen: str) -> None:

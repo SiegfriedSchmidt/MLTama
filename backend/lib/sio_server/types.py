@@ -38,6 +38,10 @@ class InfoData(TypedDict):
     depth: int
 
 
+class WinData(TypedDict):
+    winner: int
+
+
 class ServerStartData(TypedDict):
     room: str
     fen: str

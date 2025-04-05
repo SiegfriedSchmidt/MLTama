@@ -56,6 +56,7 @@ class GameMover:
         self.moves = get_possible_moves(self.field, self.side)
         self.__fill_readable_moves([])
         self.cur_capture = 0
+        return -self.side if self.moves[0, 0] == 1 else 0
 
     def __create_move_data(self, i: int, capture: bool, is_side_changes: bool) -> MoveData:
         row, col, row2, col2 = self.__get_move_from_idx(i)
@@ -85,8 +86,7 @@ class GameMover:
 
     def move_by_idx(self, move_idx: int):
         moves = self.raw_move(move_idx, self.moves[0, 1])
-        self.__end_move()
-        return moves
+        return moves, self.__end_move()
 
     def move(self, from_row, from_col, to_row, to_col):
         move_idx = self.readable_moves[from_row, from_col][to_row, to_col][0]
@@ -95,13 +95,12 @@ class GameMover:
 
             self.cur_capture += 1
             if self.cur_capture == self.moves[0, 1]:
-                self.__end_move()
+                return move, self.__end_move()
             else:
                 self.__fill_readable_moves(self.readable_moves[from_row, from_col][to_row, to_col])
         else:
             move = self.raw_move(move_idx, 0)
-            self.__end_move()
-        return move
+            return move, self.__end_move()
 
     def get_possible_for_piece(self, from_row, from_col):
         if (from_row, from_col) not in self.readable_moves:

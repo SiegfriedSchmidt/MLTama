@@ -9,7 +9,8 @@ type callbackBase = { status: ServerStatus }
 export interface ServerToClientEvents {
   select: (data: { piece: pieceType, select: [number, number], highlight: [number, number][] }) => void
   move: (data: [{ piece: pieceType, move: [number, number, number, number], fenStart: string, fenEnd: string }]) => void
-  info: (data: {depth: number}) => void
+  info: (data: { depth: number }) => void
+  win: (data: { winner: number }) => void
   start: (data: { room: string, fen: string }) => void
 }
 

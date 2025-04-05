@@ -35,6 +35,9 @@ def iterative_descent(
             if evaluated > depth_best_value:
                 depth_best_value = evaluated
                 depth_best_idx = move_idx
+                if depth_best_value == 9999:
+                    print(f'GUARANTIED WIN {"WHITE" if side == 1 else "BLACK"}')
+                    return depth_best_idx
 
             print('.', end='')
             if last:
