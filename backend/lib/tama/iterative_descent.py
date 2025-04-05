@@ -23,7 +23,7 @@ def iterative_descent(
 
     t = time()
     stats = np.array([0, 0], dtype=np.int64)  # count of leaves, max sequence
-    best_idx = 0
+    best_idx = 1
     for depth in range(1, 100):
         if time() - t > think_time / 2:
             return best_idx

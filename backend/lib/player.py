@@ -1,8 +1,8 @@
 from typing import Callable, Awaitable, Any
-from lib.tama.engines.engine1 import evaluate_node_at_depth
+import lib.tama.engines.engine1 as engine1
+import lib.tama.engines.engine2 as engine2
 import multiprocessing
 import asyncio
-
 from lib.tama.iterative_descent import iterative_descent
 
 
@@ -18,9 +18,10 @@ class HumanPlayer(Player):
 
 
 class ComputerPlayer(Player):
-    def __init__(self, side: int, think_time: int):
+    def __init__(self, side: int, think_time: int, engine: int):
         super().__init__(side)
         self.think_time = think_time
+        self.engine = engine
         self._task_queue = multiprocessing.Queue()
         self._result_queue = multiprocessing.Queue()
         self._worker = multiprocessing.Process(
@@ -32,7 +33,7 @@ class ComputerPlayer(Player):
 
     async def get_best_move(self, field, callback: Callable[[Any], Awaitable]):
         """Send task to worker and await result."""
-        self._task_queue.put((field, self.side, self.think_time))
+        self._task_queue.put((field, self.side, self.think_time, self.engine))
         return await self._poll_result(callback)
 
     @staticmethod
@@ -43,8 +44,12 @@ class ComputerPlayer(Player):
             result_queue.put(('callback', val))
 
         while True:
-            field, side, think_time = task_queue.get()
-            result = iterative_descent(evaluate_node_at_depth, field, side, think_time, callback)
+            field, side, think_time, engine = task_queue.get()
+            result = 1
+            if engine == 1:
+                result = iterative_descent(engine1.evaluate_node_at_depth, field, side, think_time, callback)
+            elif engine == 2:
+                result = iterative_descent(engine2.evaluate_node_at_depth, field, side, think_time, callback)
             result_queue.put(('result', result))
 
     async def _poll_result(self, callback: Callable[[Any], Awaitable]):
