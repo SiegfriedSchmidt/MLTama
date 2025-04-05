@@ -16,8 +16,9 @@ def evaluate_node(field):
 
 
 @njit()
-def evaluate_node_at_depth(stats, moves, field_copy, side, depth):
+def evaluate_node_at_depth(stats, field_copy, side, depth):
     field = field_copy.copy()
+    moves = get_possible_moves(field_copy, side)
     moves_idx, max_capture = moves[0, 0], moves[0, 1]
 
     alpha = -999999
@@ -28,14 +29,20 @@ def evaluate_node_at_depth(stats, moves, field_copy, side, depth):
                 make_move_with_capture(field, moves[j, 2], moves[j, 3], moves[j + 1, 0], moves[j + 1, 1],
                                        moves[j + 1, 2], moves[j + 1, 3], moves[j + 1, 4])
 
-            yield -negamax(stats, field, depth - 1, -beta, -alpha, -side)
+            value = -negamax(stats, field, depth - 1, -beta, -alpha, -side)
+            alpha = max(alpha, value)
             field = field_copy.copy()
+
+            yield i, value, i == moves_idx - max_capture - 1
     else:
         for i in range(1, moves_idx):
             make_move_without_capture(field, moves[i, 0], moves[i, 1], moves[i, 2], moves[i, 3], moves[i, 4])
 
-            yield -negamax(stats, field, depth - 1, -beta, -alpha, -side)
+            value = -negamax(stats, field, depth - 1, -beta, -alpha, -side)
+            alpha = max(alpha, value)
             field = field_copy.copy()
+
+            yield i, value, i == moves_idx - 1
 
 
 @njit()
@@ -83,9 +90,8 @@ def negamax(stats, field_copy, depth, alpha, beta, side):
 
 # compile
 test_field = fen_to_field('8/wwwwwwww/wwwwwwww/8/8/bbbbbbbb/bbbbbbbb/8 w')
-test_moves = get_possible_moves(test_field, 1)
 test_stats = np.array([0, 0], dtype=np.int64)
-evaluate_node_at_depth(test_stats, test_moves, test_field, 1, 2)
+evaluate_node_at_depth(test_stats, test_field, 1, 2)
 
 
 def main():
@@ -99,7 +105,7 @@ def main():
     print('start')
     print(evaluate_node(field))
     t = time()
-    iterative_descent(evaluate_node_at_depth, field, 1, 8)
+    iterative_descent(evaluate_node_at_depth, field, 1, 10)
     print(f"time: {time() - t:.2f}")
 
 

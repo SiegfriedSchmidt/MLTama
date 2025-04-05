@@ -57,7 +57,7 @@ class GameMover:
         self.__fill_readable_moves([])
         self.cur_capture = 0
 
-    def __create_move_data(self, i: int, capture: bool) -> MoveData:
+    def __create_move_data(self, i: int, capture: bool, is_side_changes: bool) -> MoveData:
         row, col, row2, col2 = self.__get_move_from_idx(i)
         piece = self.field[row, col]
 
@@ -70,16 +70,16 @@ class GameMover:
         else:
             make_move_without_capture(self.field, *self.moves[i])
 
-        fen_end = field_to_fen(self.field, self.side)
+        fen_end = field_to_fen(self.field, -self.side if is_side_changes else self.side)
         return {'piece': piece_to_char[piece], 'move': (row, col, row2, col2), 'fenStart': fen_start, 'fenEnd': fen_end}
 
-    def raw_move(self, move_idx: int, capture_len: int) -> list[MoveData]:
+    def raw_move(self, move_idx: int, capture_len: int, is_side_changes=True) -> list[MoveData]:
         moves: list[MoveData] = []
         if capture_len:
             for i in range(move_idx, move_idx + capture_len):
-                moves.append(self.__create_move_data(i, True))
+                moves.append(self.__create_move_data(i, True, is_side_changes))
         else:
-            moves.append(self.__create_move_data(move_idx, False))
+            moves.append(self.__create_move_data(move_idx, False, True))
 
         return moves
 
@@ -91,7 +91,7 @@ class GameMover:
     def move(self, from_row, from_col, to_row, to_col):
         move_idx = self.readable_moves[from_row, from_col][to_row, to_col][0]
         if self.cur_capture < self.moves[0, 1]:
-            move = self.raw_move(move_idx, 1)
+            move = self.raw_move(move_idx, self.cur_capture + 1 == self.moves[0, 1])
 
             self.cur_capture += 1
             if self.cur_capture == self.moves[0, 1]:
