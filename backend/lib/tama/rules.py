@@ -16,14 +16,23 @@ md = np.array([
     [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1]],  # for black
 ], dtype=np.int8)
 
+# men restricted backward dirs (king dirs indexes) while capturing
+m_restricted_dir = np.array([
+    [0, 0, 0],
+    [2, 3, 0],  # for white
+    [2, 1, 0]  # for black
+], dtype=np.int8)
+
 # king directions with capture
 kcd = np.array([[0, -1], [-1, 0], [0, 1], [1, 0]], dtype=np.int8)
 
 # king directions without capture
 kd = np.array([[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]], dtype=np.int8)
 
+# king restricted backward dirs (king dirs indexes) while capturing
+k_restricted_dir = np.array([2, 3, 0, 1], dtype=np.int8)
 
-# TODO: change side variable to color variable (looks better)
+
 # TODO: add docs for every function
 @njit()
 def on_board(row, col):
@@ -46,11 +55,11 @@ def find_capture_for_piece(field, side, row, col, pr_dir):
                 row3 = row2 + mcd[side, i, 0]
                 col3 = col2 + mcd[side, i, 1]
                 if on_board(row3, col3) and field[row3, col3] == 0:
-                    yield row2, col2, row3, col3, is_promoted(side, row3), 0
+                    yield row2, col2, row3, col3, is_promoted(side, row3), m_restricted_dir[side, i]
 
     elif field[row, col] * side == 2:
         for i in range(kcd.shape[0]):
-            if pr_dir and i == (pr_dir + 1) % 4:
+            if i == pr_dir:
                 continue
 
             row2 = row
@@ -70,7 +79,7 @@ def find_capture_for_piece(field, side, row, col, pr_dir):
                         if not on_board(row3, col3) or field[row3, col3] * side != 0:
                             break
 
-                        yield row2, col2, row3, col3, 0, i + 1
+                        yield row2, col2, row3, col3, 0, k_restricted_dir[i]
                     break
 
 
@@ -140,7 +149,7 @@ def find_field_capture_max_depth(field, side):
     max_capture = 0
     for row in range(field.shape[0]):
         for col in range(field.shape[1]):
-            max_capture = max(max_capture, find_capture_max_depth(field, side, row, col, 0, 0))
+            max_capture = max(max_capture, find_capture_max_depth(field, side, row, col, -1, 0))
 
     return max_capture
 
@@ -166,7 +175,7 @@ def find_field_possible_capture(field, side, max_capture, moves):
     piece_idx = 0
     for row in range(field.shape[0]):
         for col in range(field.shape[1]):
-            cnt = find_possible_capture(field, side, row, col, 0, 0, max_capture, piece_idx, moves)
+            cnt = find_possible_capture(field, side, row, col, -1, 0, max_capture, piece_idx, moves)
             for i in range(cnt):
                 moves[(piece_idx + i) * (max_capture + 1) + 1] = 0, 0, row, col, 0
 

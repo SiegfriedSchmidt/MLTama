@@ -91,7 +91,7 @@ class GameMover:
     def move(self, from_row, from_col, to_row, to_col):
         move_idx = self.readable_moves[from_row, from_col][to_row, to_col][0]
         if self.cur_capture < self.moves[0, 1]:
-            move = self.raw_move(move_idx, self.cur_capture + 1 == self.moves[0, 1])
+            move = self.raw_move(move_idx, 1, self.cur_capture + 1 == self.moves[0, 1])
 
             self.cur_capture += 1
             if self.cur_capture == self.moves[0, 1]:
