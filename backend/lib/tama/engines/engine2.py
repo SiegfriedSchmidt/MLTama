@@ -22,7 +22,7 @@ for i in range(8):
 
 
 @njit()
-def evaluate_node(field, depth):
+def evaluate_node(field):
     value = 0
     white_count = 0
     black_count = 0
@@ -35,9 +35,9 @@ def evaluate_node(field, depth):
             value += pieces_eval_arrays[field[i, j], i, j]
 
     if white_count == 0:
-        return -10000 + depth
+        return -10000
     elif black_count == 0:
-        return 10000 - depth
+        return 10000
     return value
 
 
@@ -75,13 +75,14 @@ def evaluate_node_at_depth(stats, field_copy, side, depth):
 def negamax(stats, field_copy, depth, alpha, beta, side):
     if depth == 0:
         stats[0] += 1
-        return evaluate_node(field_copy, depth) * side
+        return evaluate_node(field_copy) * side
 
     moves = get_possible_moves(field_copy, side)
     moves_idx, max_capture = moves[0, 0], moves[0, 1]
 
     # is terminal node
     if moves_idx == 1:
+        stats[0] += 1
         return -10000 + depth
 
     field = field_copy.copy()

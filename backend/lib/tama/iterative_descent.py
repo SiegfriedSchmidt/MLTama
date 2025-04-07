@@ -37,7 +37,7 @@ def iterative_descent(
                 depth_best_value = evaluated
                 depth_best_idx = move_idx
                 if depth_best_value > 9000:
-                    victory_in_moves = depth - (depth_best_value + 10000)
+                    victory_in_moves = depth - (10000 - depth_best_value)
                     print(f'GUARANTIED VICTORY {"WHITE" if side == 1 else "BLACK"} IN {victory_in_moves}')
                     callback(
                         {'side': side, 'depth': depth - 1, 'value': depth_best_value, 'victoryIn': victory_in_moves}

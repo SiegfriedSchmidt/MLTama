@@ -24,8 +24,8 @@ class Game:
         self.mover = GameMover(fen_to_field(fen), fen_to_side(fen))
         self.human_players: dict[str, HumanPlayer] = {}
         self.computer_players: dict[int, ComputerPlayer] = {
-            1: ComputerPlayer(1, 1, 2),
-            -1: ComputerPlayer(-1, 1, 2),
+            1: ComputerPlayer(1, 5, 2),
+            -1: ComputerPlayer(-1, 5, 2),
         }
         self.emit_select = emit_select
         self.emit_move = emit_move

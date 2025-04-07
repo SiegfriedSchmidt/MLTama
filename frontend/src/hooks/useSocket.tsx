@@ -3,10 +3,10 @@ import {useEffect, useState} from "react";
 import {callbackInfoType} from "@/types/game.ts";
 
 export default function useSocket() {
-  const [info, setInfo] = useState<{ white: callbackInfoType, black: callbackInfoType, both: { depth: number } }>({
+  const [info, setInfo] = useState<{ white: callbackInfoType, black: callbackInfoType, current: callbackInfoType }>({
     white: {side: 0, depth: 0, value: 0, victoryIn: 0},
     black: {side: 0, depth: 0, value: 0, victoryIn: 0},
-    both: {depth: 0}
+    current: {side: 0, depth: 0, value: 0, victoryIn: 0},
   });
   const [win, setWin] = useState<{ winner: number }>();
 
@@ -14,11 +14,11 @@ export default function useSocket() {
     socket.on('info', (data) => {
       if (data.side == 1) {
         setInfo(info => {
-          return {...info, white: data, both: data}
+          return {...info, white: data, current: data}
         })
       } else {
         setInfo(info => {
-          return {...info, black: data, both: data}
+          return {...info, black: data, current: data}
         })
       }
     });
