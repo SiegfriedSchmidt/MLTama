@@ -8,7 +8,7 @@ import GameInfo from "@/components/GameInfo.tsx";
 
 const HomePage = () => {
   const [gameInfo, setGameInfo] = useState<gameInfoType>()
-  const {info, win} = useSocket()
+  const {info, win, setWin} = useSocket()
   const {successToast} = useToast()
   const startGameRef = useRef<(data: startGameParams) => void>(null);
 
@@ -17,10 +17,11 @@ const HomePage = () => {
   }, [startGameRef]);
 
   useEffect(() => {
-    if (win) {
+    if (win.winner) {
       successToast(win.winner == 1 ? "Белые победили!" : "Черные победили!")
+      setWin({winner: 0})
     }
-  }, [successToast, win]);
+  }, [setWin, successToast, win]);
 
   function onClick() {
     startGameRef.current?.({room: '1000', fen: '', restart: true})

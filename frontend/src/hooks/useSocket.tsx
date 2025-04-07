@@ -8,7 +8,7 @@ export default function useSocket() {
     black: {side: 0, depth: 0, value: 0, victoryIn: 0},
     current: {side: 0, depth: 0, value: 0, victoryIn: 0},
   });
-  const [win, setWin] = useState<{ winner: number }>();
+  const [win, setWin] = useState<{ winner: number }>({winner: 0});
 
   useEffect(() => {
     socket.on('info', (data) => {
@@ -30,5 +30,5 @@ export default function useSocket() {
     };
   }, []);
 
-  return {info, win}
+  return {info, win, setWin}
 }

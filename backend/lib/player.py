@@ -1,6 +1,7 @@
 from typing import Callable, Awaitable, Any
 import lib.tama.engines.engine1 as engine1
 import lib.tama.engines.engine2 as engine2
+import lib.tama.engines.engine3 as engine3
 import multiprocessing
 import asyncio
 from lib.tama.iterative_descent import iterative_descent
@@ -50,6 +51,8 @@ class ComputerPlayer(Player):
                 result = iterative_descent(engine1.evaluate_node_at_depth, field, side, think_time, callback)
             elif engine == 2:
                 result = iterative_descent(engine2.evaluate_node_at_depth, field, side, think_time, callback)
+            elif engine == 3:
+                result = iterative_descent(engine3.evaluate_node_at_depth, field, side, think_time, callback)
             result_queue.put(('result', result))
 
     async def _poll_result(self, callback: Callable[[Any], Awaitable]):
@@ -69,4 +72,5 @@ class ComputerPlayer(Player):
             self._worker.terminate()
 
     def __del__(self):
+        print('shutdown worker')
         self.shutdown()

@@ -12,6 +12,16 @@ def is_one_move_possible(field, side):
     return moves_idx == 2 + max_capture
 
 
+def is_near_victory(depth_best_value, depth, side, callback):
+    if depth_best_value > 9000:
+        print(f'GUARANTIED VICTORY {"WHITE" if side == 1 else "BLACK"} IN {depth}')
+        callback(
+            {'side': side, 'depth': depth, 'value': depth_best_value, 'victoryIn': depth}
+        )
+        return True
+    return False
+
+
 def iterative_descent(
         evaluate_node_at_depth: Callable[[np.ndarray, np.ndarray, int, int], Iterator[tuple[int, int, bool]]],
         field: np.ndarray, side: int, think_time: int, callback: Callable[[InfoData], None]
@@ -36,13 +46,6 @@ def iterative_descent(
             if evaluated > depth_best_value:
                 depth_best_value = evaluated
                 depth_best_idx = move_idx
-                if depth_best_value > 9000:
-                    victory_in_moves = depth - (10000 - depth_best_value)
-                    print(f'GUARANTIED VICTORY {"WHITE" if side == 1 else "BLACK"} IN {victory_in_moves}')
-                    callback(
-                        {'side': side, 'depth': depth - 1, 'value': depth_best_value, 'victoryIn': victory_in_moves}
-                    )
-                    return depth_best_idx
 
             print('.', end='')
             if last:
@@ -50,7 +53,12 @@ def iterative_descent(
 
             if time() - t > think_time:
                 print()
+                if is_near_victory(depth_best_value, depth, side, callback):
+                    return depth_best_idx
                 return best_idx
+
+        if is_near_victory(depth_best_value, depth, side, callback):
+            return depth_best_idx
 
         best_idx = depth_best_idx
         callback({'side': side, 'depth': depth, 'value': depth_best_value, 'victoryIn': 0})
