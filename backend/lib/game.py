@@ -21,12 +21,12 @@ class Game:
     def __init__(self, fen: str, emit_select: Callable[[SelectData], Awaitable[None]],
                  emit_move: Callable[[MoveData], Awaitable[None]], emit_info: Callable[[InfoData], Awaitable[None]],
                  emit_win: Callable[[WinData], Awaitable[None]]):
-        fen = fen if fen else fens[-1]
+        fen = fen if fen else fens[0]
         self.mover = GameMover(fen_to_field(fen), fen_to_side(fen))
         self.human_players: dict[str, HumanPlayer] = {}
         self.computer_players: dict[int, ComputerPlayer] = {
             # 1: ComputerPlayer(1, 5, 3),
-            -1: ComputerPlayer(-1, 5, 3),
+            -1: ComputerPlayer(-1, 1, 3),
         }
         self.emit_select = emit_select
         self.emit_move = emit_move

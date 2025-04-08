@@ -98,6 +98,7 @@ class GameMover:
                 return move, self.__end_move()
             else:
                 self.__fill_readable_moves(self.readable_moves[from_row, from_col][to_row, to_col])
+                return move, 0
         else:
             move = self.raw_move(move_idx, 0)
             return move, self.__end_move()

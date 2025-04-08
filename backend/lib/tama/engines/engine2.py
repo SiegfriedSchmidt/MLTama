@@ -83,7 +83,7 @@ def negamax(stats, field_copy, depth, alpha, beta, side):
     # is terminal node
     if moves_idx == 1:
         stats[0] += 1
-        return -10000 + depth
+        return -10000
 
     field = field_copy.copy()
     stats[1] = max(stats[1], moves_idx)
