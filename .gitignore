@@ -37,3 +37,4 @@ tests
 test
 secrets
 database.sqlite
+cmake-build-debug
