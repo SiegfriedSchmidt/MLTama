@@ -71,8 +71,7 @@ static void fill_buffer_non_capture_move(int index, int row2, int col2, int prom
     BUFFER_NON_CAPTURE_MOVES[index].promoted = promoted;
 }
 
-static void fill_moves_move(MOVES_TYPE moves[][5], long index, int row2, int col2, int row3, int col3,
-                            int promoted) {
+static void fill_moves_move(MOVES_TYPE moves[][5], int index, int row2, int col2, int row3, int col3, int promoted) {
     moves[index][0] = row2;
     moves[index][1] = col2;
     moves[index][2] = row3;
@@ -87,11 +86,11 @@ static int find_capture_moves_for_piece(int field[8][8], Color side, int row, in
             int row2 = row + MCD[side + 1][i][0];
             int col2 = col + MCD[side + 1][i][1];
             if (on_board(row2, col2) && field[row2][col2] * side < 0) {
-                int row3 = row2 + MCD[side][i][0];
-                int col3 = col2 + MCD[side][i][1];
+                int row3 = row2 + MCD[side + 1][i][0];
+                int col3 = col2 + MCD[side + 1][i][1];
                 if (on_board(row3, col3) && field[row3][col3] == 0) {
                     fill_buffer_capture_move(index++, row2, col2, row3, col3, is_promoted(side, row3),
-                                             M_RESTRICTED_DIR[side][i]);
+                                             M_RESTRICTED_DIR[side + 1][i]);
                 }
             }
         }
@@ -159,7 +158,7 @@ static int find_capture_max_depth(int field[8][8], Color side, int row, int col,
     int max_depth = depth;
     int index = find_capture_moves_for_piece(field, side, row, col, pr_dir);
     for (int i = 0; i < index; ++i) {
-        const CaptureMove *move = &BUFFER_CAPTURE_MOVES[index];
+        const CaptureMove *move = &BUFFER_CAPTURE_MOVES[i];
 
         int captured_piece = field[move->row2][move->col2];
         int piece = field[row][col];
@@ -182,31 +181,32 @@ static int find_field_capture_max_depth(int field[8][8], Color side) {
     for (int row = 0; row < 8; ++row) {
         for (int col = 0; col < 8; ++col) {
             max_capture = maxi(max_capture, find_capture_max_depth(field, side, row, col, -1, 0));
+            printf("%d", find_capture_max_depth(field, side, row, col, -1, 0));
         }
     }
 
     return max_capture;
 }
 
-static long find_possible_capture(int field[8][8], Color side, int row, int col, int pr_dir, int depth, int max_depth,
-                                  long piece_idx, MOVES_TYPE moves[][5]) {
+static int find_possible_capture(int field[8][8], Color side, int row, int col, int pr_dir, int depth, int max_depth,
+                                 int piece_idx, MOVES_TYPE moves[][5]) {
     if (depth == max_depth) {
         return 1;
     }
 
-    long piece_offset = piece_idx;
+    int piece_offset = piece_idx;
     int index = find_capture_moves_for_piece(field, side, row, col, pr_dir);
     for (int i = 0; i < index; ++i) {
-        const CaptureMove *move = &BUFFER_CAPTURE_MOVES[index];
+        const CaptureMove *move = &BUFFER_CAPTURE_MOVES[i];
 
         int captured_piece = field[move->row2][move->col2];
         int piece = field[row][col];
         make_move_with_capture(field, row, col, move->row2, move->col2, move->row3, move->col3, move->promoted);
 
-        long cnt = find_possible_capture(field, side, move->row3, move->col3, move->pr_dir, depth + 1, max_depth,
-                                         piece_idx, moves);
+        int cnt = find_possible_capture(field, side, move->row3, move->col3, move->pr_dir, depth + 1, max_depth,
+                                        piece_idx, moves);
         for (int j = 0; j < cnt; ++j) {
-            fill_moves_move(moves, (piece_idx + i) * (max_depth + 1) + depth + 2, move->row2, move->col2, move->row3,
+            fill_moves_move(moves, (piece_idx + j) * (max_depth + 1) + depth + 2, move->row2, move->col2, move->row3,
                             move->col3, move->promoted);
         }
         piece_idx += cnt;
@@ -219,11 +219,11 @@ static long find_possible_capture(int field[8][8], Color side, int row, int col,
     return piece_idx - piece_offset;
 }
 
-static long find_field_possible_capture(int field[8][8], Color side, int max_capture, MOVES_TYPE moves[][5]) {
-    long piece_idx = 0;
+static int find_field_possible_capture(int field[8][8], Color side, int max_capture, MOVES_TYPE moves[][5]) {
+    int piece_idx = 0;
     for (int row = 0; row < 8; ++row) {
         for (int col = 0; col < 8; ++col) {
-            long cnt = find_possible_capture(field, side, row, col, -1, 0, max_capture, piece_idx, moves);
+            int cnt = find_possible_capture(field, side, row, col, -1, 0, max_capture, piece_idx, moves);
             for (int i = 0; i < cnt; ++i) {
                 fill_moves_move(moves, (piece_idx + i) * (max_capture + 1) + 1, 0, 0, row, col, 0);
             }
@@ -235,8 +235,8 @@ static long find_field_possible_capture(int field[8][8], Color side, int max_cap
     return piece_idx;
 }
 
-static long find_field_possible_moves(int field[8][8], Color side, MOVES_TYPE moves[][5]) {
-    long piece_idx = 0;
+static int find_field_possible_moves(int field[8][8], Color side, MOVES_TYPE moves[][5]) {
+    int piece_idx = 0;
     for (int row = 0; row < 8; ++row) {
         for (int col = 0; col < 8; ++col) {
             int index = find_moves_for_piece(field, side, row, col);

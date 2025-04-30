@@ -1,6 +1,7 @@
 import ctypes
 import numpy as np
 from numba import njit
+# from rules import get_possible_moves as get_possible_moves2
 
 lib = ctypes.CDLL('../../../libc/cmake-build-debug/libc.so')
 MOVES_POINTER = np.ctypeslib.ndpointer(dtype=np.intc, ndim=2, flags='C_CONTIGUOUS')
@@ -12,7 +13,7 @@ get_possible_moves_c.restype = None
 
 
 def get_possible_moves(field: np.ndarray, side: int):
-    moves = np.zeros((10000, 5), dtype=np.int32)
+    moves = np.zeros((10000, 5), dtype=np.intc)
     get_possible_moves_c(moves, field, side)
     return moves
 
@@ -30,7 +31,7 @@ def main():
     ], dtype=np.intc)
 
     moves = get_possible_moves(start_field, 1)
-    print(moves[0: moves[0][0]])
+    print(moves[0: moves[0][0] + 10])
 
 
 if __name__ == '__main__':
