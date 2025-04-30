@@ -3,30 +3,28 @@
 
 #include "rules.h"
 
-#include <stdio.h>
-
 // CONST ARRAYS
 #define MCD_SIZE 3
 // men directions with capture
 static const int MCD[3][MCD_SIZE][2] = {
-    {{0, -1}, {-1, 0}, {0, 1}}, // for white
-    {{0, 0}, {0, 0}, {0, 0}}, // stub
     {{0, -1}, {1, 0}, {0, 1}}, // for black
+    {{0, 0}, {0, 0}, {0, 0}}, // stub
+    {{0, -1}, {-1, 0}, {0, 1}}, // for white
 };
 
 #define MD_SIZE 5
 // men directions without capture
 static const int MD[3][MD_SIZE][2] = {
-    {{0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}}, // for white
-    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}}, // stub
     {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}}, // for black
+    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}}, // stub
+    {{0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}}, // for white
 };
 
 // men restricted backward dirs (king dirs indexes) while capturing
 static const int M_RESTRICTED_DIR[3][3] = {
-    {2, 3, 0}, // for white
+    {2, 1, 0}, // for black
     {0, 0, 0}, // stub
-    {2, 1, 0} // for black
+    {2, 3, 0}, // for white
 };
 
 #define KCD_SIZE 4
@@ -41,6 +39,7 @@ static const int KD[KD_SIZE][2] = {{0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, 
 static const int K_RESTRICTED_DIR[4] = {2, 3, 0, 1};
 
 // BUFFER ARRAYS
+int BUFFER_INDEX = 0;
 CaptureMove BUFFER_CAPTURE_MOVES[100];
 NonCaptureMove BUFFER_NON_CAPTURE_MOVES[100];
 
@@ -80,7 +79,7 @@ static void fill_moves_move(MOVES_TYPE moves[][5], int index, int row2, int col2
 }
 
 static int find_capture_moves_for_piece(int field[8][8], Color side, int row, int col, int pr_dir) {
-    int index = 0;
+    int index = BUFFER_INDEX;
     if (field[row][col] * side == MAN) {
         for (int i = 0; i < MCD_SIZE; ++i) {
             int row2 = row + MCD[side + 1][i][0];
@@ -157,13 +156,14 @@ static int find_moves_for_piece(int field[8][8], Color side, int row, int col) {
 static int find_capture_max_depth(int field[8][8], Color side, int row, int col, int pr_dir, int depth) {
     int max_depth = depth;
     int index = find_capture_moves_for_piece(field, side, row, col, pr_dir);
-    for (int i = 0; i < index; ++i) {
+    for (int i = BUFFER_INDEX; i < index; ++i) {
         const CaptureMove *move = &BUFFER_CAPTURE_MOVES[i];
 
         int captured_piece = field[move->row2][move->col2];
         int piece = field[row][col];
         make_move_with_capture(field, row, col, move->row2, move->col2, move->row3, move->col3, move->promoted);
 
+        BUFFER_INDEX = index;
         max_depth = maxi(
             max_depth, find_capture_max_depth(field, side, move->row3, move->col3, move->pr_dir, depth + 1)
         );
@@ -180,8 +180,9 @@ static int find_field_capture_max_depth(int field[8][8], Color side) {
     int max_capture = 0;
     for (int row = 0; row < 8; ++row) {
         for (int col = 0; col < 8; ++col) {
+            BUFFER_INDEX = 0;
             max_capture = maxi(max_capture, find_capture_max_depth(field, side, row, col, -1, 0));
-            printf("%d", find_capture_max_depth(field, side, row, col, -1, 0));
+            // printf("%d", find_capture_max_depth(field, side, row, col, -1, 0));
         }
     }
 
@@ -196,15 +197,17 @@ static int find_possible_capture(int field[8][8], Color side, int row, int col, 
 
     int piece_offset = piece_idx;
     int index = find_capture_moves_for_piece(field, side, row, col, pr_dir);
-    for (int i = 0; i < index; ++i) {
+    for (int i = BUFFER_INDEX; i < index; ++i) {
         const CaptureMove *move = &BUFFER_CAPTURE_MOVES[i];
 
         int captured_piece = field[move->row2][move->col2];
         int piece = field[row][col];
         make_move_with_capture(field, row, col, move->row2, move->col2, move->row3, move->col3, move->promoted);
 
+        BUFFER_INDEX = index;
         int cnt = find_possible_capture(field, side, move->row3, move->col3, move->pr_dir, depth + 1, max_depth,
                                         piece_idx, moves);
+
         for (int j = 0; j < cnt; ++j) {
             fill_moves_move(moves, (piece_idx + j) * (max_depth + 1) + depth + 2, move->row2, move->col2, move->row3,
                             move->col3, move->promoted);
@@ -223,6 +226,7 @@ static int find_field_possible_capture(int field[8][8], Color side, int max_capt
     int piece_idx = 0;
     for (int row = 0; row < 8; ++row) {
         for (int col = 0; col < 8; ++col) {
+            BUFFER_INDEX = 0;
             int cnt = find_possible_capture(field, side, row, col, -1, 0, max_capture, piece_idx, moves);
             for (int i = 0; i < cnt; ++i) {
                 fill_moves_move(moves, (piece_idx + i) * (max_capture + 1) + 1, 0, 0, row, col, 0);

@@ -1,7 +1,7 @@
 import ctypes
 import numpy as np
 from numba import njit
-# from rules import get_possible_moves as get_possible_moves2
+from rules import get_possible_moves as get_possible_moves2
 
 lib = ctypes.CDLL('../../../libc/cmake-build-debug/libc.so')
 MOVES_POINTER = np.ctypeslib.ndpointer(dtype=np.intc, ndim=2, flags='C_CONTIGUOUS')
@@ -31,7 +31,9 @@ def main():
     ], dtype=np.intc)
 
     moves = get_possible_moves(start_field, 1)
-    print(moves[0: moves[0][0] + 10])
+    print(moves[0: moves[0][0]])
+    moves = get_possible_moves2(start_field, 1)
+    print(moves[0: moves[0][0]])
 
 
 if __name__ == '__main__':
