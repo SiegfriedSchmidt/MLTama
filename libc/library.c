@@ -1,5 +1,2 @@
 #include <stdio.h>
-
-void hello(void) {
-    printf("Hello, World!\n");
-}
+#include "rules.h"

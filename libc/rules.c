@@ -3,8 +3,7 @@
 
 #include "rules.h"
 
-#define MOVES_SIZE 10000
-static typedef long MOVES_TYPE;
+#include <stdio.h>
 
 // CONST ARRAYS
 #define MCD_SIZE 3
@@ -72,7 +71,7 @@ static void fill_buffer_non_capture_move(int index, int row2, int col2, int prom
     BUFFER_NON_CAPTURE_MOVES[index].promoted = promoted;
 }
 
-static void fill_moves_move(MOVES_TYPE moves[MOVES_SIZE][5], long index, int row2, int col2, int row3, int col3,
+static void fill_moves_move(MOVES_TYPE moves[][5], long index, int row2, int col2, int row3, int col3,
                             int promoted) {
     moves[index][0] = row2;
     moves[index][1] = col2;
@@ -190,7 +189,7 @@ static int find_field_capture_max_depth(int field[8][8], Color side) {
 }
 
 static long find_possible_capture(int field[8][8], Color side, int row, int col, int pr_dir, int depth, int max_depth,
-                                  long piece_idx, MOVES_TYPE moves[MOVES_SIZE][5]) {
+                                  long piece_idx, MOVES_TYPE moves[][5]) {
     if (depth == max_depth) {
         return 1;
     }
@@ -220,7 +219,7 @@ static long find_possible_capture(int field[8][8], Color side, int row, int col,
     return piece_idx - piece_offset;
 }
 
-static long find_field_possible_capture(int field[8][8], Color side, int max_capture, MOVES_TYPE moves[MOVES_SIZE][5]) {
+static long find_field_possible_capture(int field[8][8], Color side, int max_capture, MOVES_TYPE moves[][5]) {
     long piece_idx = 0;
     for (int row = 0; row < 8; ++row) {
         for (int col = 0; col < 8; ++col) {
@@ -236,7 +235,7 @@ static long find_field_possible_capture(int field[8][8], Color side, int max_cap
     return piece_idx;
 }
 
-static long find_field_possible_moves(int field[8][8], Color side, MOVES_TYPE moves[MOVES_SIZE][5]) {
+static long find_field_possible_moves(int field[8][8], Color side, MOVES_TYPE moves[][5]) {
     long piece_idx = 0;
     for (int row = 0; row < 8; ++row) {
         for (int col = 0; col < 8; ++col) {
@@ -251,7 +250,7 @@ static long find_field_possible_moves(int field[8][8], Color side, MOVES_TYPE mo
     return piece_idx;
 }
 
-void get_possible_moves(MOVES_TYPE moves[MOVES_SIZE][5], int field[8][8], Color side) {
+void get_possible_moves(MOVES_TYPE moves[][5], int field[8][8], Color side) {
     fill_moves_move(moves, 0, 0, 0, 0, 0, 0);
     int max_capture = find_field_capture_max_depth(field, side);
     moves[0][1] = max_capture;

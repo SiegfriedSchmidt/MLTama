@@ -4,6 +4,8 @@
 #ifndef RULES_H
 #define RULES_H
 
+typedef int MOVES_TYPE;
+
 typedef enum { WHITE = 1, BLACK = -1 } Color;
 
 typedef enum { MAN = 1, KING = 2 } Piece;
@@ -27,5 +29,5 @@ void make_move_without_capture(int [8][8], int, int, int, int, int);
 
 void make_move_with_capture(int [8][8], int, int, int, int, int, int, int);
 
-void get_possible_moves(long moves[10000][5], int field[8][8], Color side);
+void get_possible_moves(MOVES_TYPE moves[][5], int field[8][8], Color side);
 #endif //RULES_H

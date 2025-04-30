@@ -4,6 +4,7 @@ project(libc C)
 set(CMAKE_C_STANDARD 17)
 
 #add_compile_options(-fPIC -Wall -O3 -march=native)
+add_compile_options(-fPIC -Wall)
 set(SOURCE_FILES
         main.c
         rules.c
