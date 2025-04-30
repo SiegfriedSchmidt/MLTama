@@ -1,11 +1,11 @@
 from numba import config
 
-# config.DISABLE_JIT = True
+config.DISABLE_JIT = True
 
 import numpy as np
 from time import time
 from numba import njit
-from lib.tama.rules import get_possible_moves, make_move_with_capture, make_move_without_capture
+from lib.tama.rules_libc import get_possible_moves, make_move_with_capture, make_move_without_capture
 from lib.fen import fen_to_field
 from lib.tama.helpers import field_to_fen_numba
 
@@ -95,7 +95,8 @@ def negamax(stats, field_copy, depth, alpha, beta, side):
                 make_move_with_capture(field, moves[j, 2], moves[j, 3], moves[j + 1, 0], moves[j + 1, 1],
                                        moves[j + 1, 2], moves[j + 1, 3], moves[j + 1, 4])
 
-            value = max(value, -negamax(stats, field, depth - 1, -beta, -alpha, -side))
+            next_depth = depth - 1 if depth > 1 else depth
+            value = max(value, -negamax(stats, field, next_depth, -beta, -alpha, -side))
             alpha = max(alpha, value)
             if alpha >= beta:
                 break
@@ -132,7 +133,7 @@ def main():
     print('start')
     print(evaluate_node(field))
     t = time()
-    iterative_descent(evaluate_node_at_depth, field, 1, 10)
+    iterative_descent(evaluate_node_at_depth, field, 1, 10, lambda a: a)
     print(f"time: {time() - t:.2f}")
 
 

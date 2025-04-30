@@ -40,7 +40,7 @@ static const int K_RESTRICTED_DIR[4] = {2, 3, 0, 1};
 
 // BUFFER ARRAYS
 int BUFFER_INDEX = 0;
-CaptureMove BUFFER_CAPTURE_MOVES[100];
+CaptureMove BUFFER_CAPTURE_MOVES[10000];
 NonCaptureMove BUFFER_NON_CAPTURE_MOVES[100];
 
 static int maxi(int a, int b) {
@@ -182,7 +182,6 @@ static int find_field_capture_max_depth(int field[8][8], Color side) {
         for (int col = 0; col < 8; ++col) {
             BUFFER_INDEX = 0;
             max_capture = maxi(max_capture, find_capture_max_depth(field, side, row, col, -1, 0));
-            // printf("%d", find_capture_max_depth(field, side, row, col, -1, 0));
         }
     }
 
@@ -266,7 +265,7 @@ void get_possible_moves(MOVES_TYPE moves[][5], int field[8][8], Color side) {
 }
 
 void make_move_without_capture(int field[8][8], int row, int col, int row2, int col2, int promoted) {
-    field[row2][col2] = field[row][col] * (promoted ? 2 : 1);
+    field[row2][col2] = field[row][col] * (promoted ? KING : MAN);
     field[row][col] = 0;
 }
 

@@ -10,7 +10,7 @@ def fen_to_side(fen: str) -> int:
 
 
 def fen_to_field(fen: str):
-    field = np.zeros((8, 8), dtype=np.int8)
+    field = np.zeros((8, 8), dtype=np.intc)
     row, col = 7, 0
     for char in fen.split()[0]:
         if char == '/':
