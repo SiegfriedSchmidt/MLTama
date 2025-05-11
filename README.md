@@ -11,4 +11,4 @@ touch docker-compose.yml # <- copy docker-compose.yml from repository
 docker compose up
 ```
 
-Web interface will be avaible on [http://localhost:8000](http://localhost:8000)
+Web interface will be available on [http://localhost:8000](http://localhost:8000)
