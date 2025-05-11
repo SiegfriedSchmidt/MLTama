@@ -24,9 +24,10 @@ class Game:
         fen = fen if fen else fens[0]
         self.mover = GameMover(fen_to_field(fen), fen_to_side(fen))
         self.human_players: dict[str, HumanPlayer] = {}
+        # Don't mix up the sides
         self.computer_players: dict[int, ComputerPlayer] = {
-            # 1: ComputerPlayer(1, 5, 3),
             -1: ComputerPlayer(-1, 1, 3),
+            # 1: ComputerPlayer(1, 2, 2),
         }
         self.emit_select = emit_select
         self.emit_move = emit_move

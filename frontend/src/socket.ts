@@ -19,7 +19,8 @@ export interface ClientToServerEvents {
   click: (data: [number, number]) => void
 }
 
-export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('https://192.168.2.200:5000', {
+const url = process.env.NODE_ENV === 'production' ? '/' : 'https://192.168.2.200:5000'
+export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(url, {
   autoConnect: true, // Just to know that this option exists :)
 });
 

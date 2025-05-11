@@ -18,6 +18,6 @@ export default defineConfig({
       'top-level-await': true
     },
   },
-  base: process.env.NODE_ENV === 'production' ? '/MLTama/' : '/',
+  base: process.env.NODE_ENV === 'production' ? '/static/' : '/',
   plugins: [react(), tsconfigPaths()],
 })
