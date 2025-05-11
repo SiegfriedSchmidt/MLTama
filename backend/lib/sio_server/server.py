@@ -64,12 +64,12 @@ async def connect_to_room(sid: str, room: str, fen: str) -> None:
         # existing room
         print(f'enter existing room {room}')
         game = games[room]
-        game.add_human_player(HumanPlayer(1, sid))
+        game.add_human_player(HumanPlayer(1 if len(game.human_players.keys()) == 0 else -1, sid))
     else:
         # new room
         print(f'create new room {room}')
         game = await create_game(fen, room)
-        game.add_human_player(HumanPlayer(1, sid))
+        game.add_human_player(HumanPlayer(1 if len(game.human_players.keys()) == 0 else -1, sid))
         games[room] = game
 
     await server_start({'room': room, 'fen': game.fen}, to=sid)

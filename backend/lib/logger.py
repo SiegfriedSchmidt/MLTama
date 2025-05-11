@@ -94,8 +94,8 @@ log_stream = LogStream()
 
 
 def setup_uvicorn_logger():
-    create_logger("uvicorn.error", f"{Fore.CYAN}FASTAPI", log_stream, Fore.CYAN)
-    create_logger("uvicorn.access", f"{Fore.CYAN}FASTAPI", log_stream, Fore.LIGHTMAGENTA_EX)
+    create_logger("uvicorn.error", f"{Fore.CYAN}UVICORN", log_stream, Fore.CYAN)
+    create_logger("uvicorn.access", f"{Fore.CYAN}UVICORN", log_stream, Fore.LIGHTMAGENTA_EX)
 
 
 main_logger = create_logger('LOGGER', 'LOGGER', log_stream, Fore.MAGENTA)
