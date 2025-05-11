@@ -25,6 +25,7 @@ dist-ssr
 
 # other
 certs
+cert
 __pycache__
 .env
 secret
@@ -37,4 +38,5 @@ tests
 test
 secrets
 database.sqlite
+.mypy_cache
 

@@ -1,0 +1,14 @@
+services:
+  tama:
+    platform: linux/amd64
+    build: .
+    image: siegfriedschmidt/ml-tama
+    container_name: ml-tama
+    environment:
+      - SSL_CERTS=0
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=8000
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: "no"
